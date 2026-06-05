@@ -1,0 +1,40 @@
+name: Deploy backend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {} # allow manual run from the Actions tab
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false # never interrupt an in-flight deploy
+
+jobs:
+  # Gate: fail the deploy if the code doesn't compile / lint.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH → pull, build, restart on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }} # optional; defaults to 22 if unset
+          script_stop: true # abort on first failed command
+          script: |
+            cd /opt/spendsnap-backend
+            ./deploy/deploy.sh

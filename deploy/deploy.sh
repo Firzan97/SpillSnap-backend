@@ -14,9 +14,10 @@ npm ci
 echo "→ Building..."
 npm run build
 
-echo "→ Restarting service..."
-sudo systemctl restart spendsnap-api
-sleep 2
-sudo systemctl status spendsnap-api --no-pager -l | head -n 12
+echo "→ Reloading PM2 process..."
+# reload if already running, else start it the first time
+pm2 reload spendsnap-api --update-env || pm2 start ecosystem.config.js
+pm2 save
+pm2 status spendsnap-api
 
-echo "✓ Deployed. Tail logs with: journalctl -u spendsnap-api -f"
+echo "✓ Deployed. Tail logs with: pm2 logs spendsnap-api"
