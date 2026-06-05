@@ -5,6 +5,10 @@ set -euo pipefail
 
 cd /opt/spendsnap-backend
 
+# Tolerate the repo dir being owned by another user (e.g. provisioned as root).
+# Without this, git aborts with "detected dubious ownership".
+git config --global --add safe.directory /opt/spendsnap-backend 2>/dev/null || true
+
 echo "→ Pulling latest..."
 git pull origin main
 
