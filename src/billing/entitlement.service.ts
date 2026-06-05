@@ -1,0 +1,95 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../users/entities/user.entity';
+import {
+  BillingInterval,
+  PlanId,
+  Subscription,
+  SubscriptionStatus,
+} from './entities/subscription.entity';
+import {
+  FREE_DAILY_UPLOAD_LIMIT,
+  FREE_FEATURES,
+  PRO_FEATURES,
+  PlanFeatures,
+} from './plans.config';
+import { UsageService } from './usage.service';
+
+export interface Entitlement {
+  plan: PlanId;
+  status: SubscriptionStatus;
+  isPro: boolean; // trialing or actively subscribed
+  canSnap: boolean; // may upload a receipt right now
+  uploadsToday: number;
+  dailyUploadLimit: number | null; // null = unlimited
+  features: PlanFeatures;
+  trialEndsAt: Date | null;
+  trialDaysLeft: number;
+  renewsAt: Date | null;
+  billingInterval: BillingInterval | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+function daysBetween(from: Date, to: Date): number {
+  return Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86_400_000));
+}
+
+@Injectable()
+export class EntitlementService {
+  constructor(
+    @InjectRepository(Subscription)
+    private readonly subRepo: Repository<Subscription>,
+    private readonly usage: UsageService,
+  ) {}
+
+  async findSubscription(userId: string): Promise<Subscription | null> {
+    return this.subRepo.findOne({ where: { userId } });
+  }
+
+  /**
+   * Resolve what a user is entitled to right now. Pro access comes from either
+   * an in-progress free trial (User.trialEndsAt) or an active paid Stripe
+   * subscription. Everyone else is post-trial Free: 1 upload/day.
+   */
+  async resolve(user: User): Promise<Entitlement> {
+    const now = new Date();
+    const sub = await this.findSubscription(user.id);
+
+    const paidActive =
+      !!sub &&
+      (sub.status === SubscriptionStatus.ACTIVE ||
+        sub.status === SubscriptionStatus.TRIALING) &&
+      (!sub.currentPeriodEnd || sub.currentPeriodEnd > now);
+
+    const trialActive = !!user.trialEndsAt && new Date(user.trialEndsAt) > now;
+
+    const isPro = paidActive || trialActive;
+
+    const uploadsToday = await this.usage.todayCount(user.id);
+    const dailyUploadLimit = isPro ? null : FREE_DAILY_UPLOAD_LIMIT;
+    const canSnap = isPro || uploadsToday < FREE_DAILY_UPLOAD_LIMIT;
+
+    let status: SubscriptionStatus;
+    if (paidActive) status = sub.status;
+    else if (trialActive) status = SubscriptionStatus.TRIALING;
+    else status = sub?.status ?? SubscriptionStatus.EXPIRED;
+
+    return {
+      plan: isPro ? PlanId.PRO : PlanId.FREE,
+      status,
+      isPro,
+      canSnap,
+      uploadsToday,
+      dailyUploadLimit,
+      features: isPro ? PRO_FEATURES : FREE_FEATURES,
+      trialEndsAt: user.trialEndsAt ?? null,
+      trialDaysLeft: user.trialEndsAt
+        ? daysBetween(now, new Date(user.trialEndsAt))
+        : 0,
+      renewsAt: paidActive ? (sub?.currentPeriodEnd ?? null) : null,
+      billingInterval: sub?.billingInterval ?? null,
+      cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
+    };
+  }
+}

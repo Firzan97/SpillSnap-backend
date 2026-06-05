@@ -1,0 +1,27 @@
+# systemd unit for the SpendSnap NestJS backend.
+# Install: sudo cp deploy/spendsnap-api.service /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now spendsnap-api
+
+[Unit]
+Description=SpendSnap API (NestJS)
+After=network.target
+
+[Service]
+Type=simple
+User=spendsnap
+WorkingDirectory=/opt/spendsnap-backend
+EnvironmentFile=/opt/spendsnap-backend/.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node dist/main.js
+Restart=always
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,22 @@
+# SpendSnap API reverse proxy — Caddy handles HTTPS automatically (Let's Encrypt).
+# Put this at /etc/caddy/Caddyfile on the VPS, then: sudo systemctl reload caddy
+#
+# DNS: point api.spendsnap.my -> <VPS_IP> as an A record, set to "DNS only"
+# (grey cloud) in Cloudflare so Caddy can obtain its own cert directly.
+
+api.spendsnap.my {
+	# Forward everything to the NestJS process on :3000
+	reverse_proxy localhost:3000
+
+	# Allow receipt-image uploads (capture accepts up to 15 MB).
+	request_body {
+		max_size 20MB
+	}
+
+	encode gzip
+
+	log {
+		output file /var/log/caddy/spendsnap-api.log
+		format console
+	}
+}
