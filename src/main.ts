@@ -70,7 +70,10 @@ async function bootstrap() {
         'settings',
         'Server-driven settings screens (index, account & security, help) + categories, tags, notification prefs',
       )
-      .addTag('export', 'CSV export for LHDN e-Filing — summary, generate, re-download')
+      .addTag(
+        'export',
+        'CSV export for LHDN e-Filing — summary, generate, re-download',
+      )
       .addTag('pricing', 'Public plan catalog (Free + Pro)')
       .addTag(
         'subscription',
@@ -103,4 +106,4 @@ async function bootstrap() {
   console.log(`🚀 SpendSnap API running on http://localhost:${port}/api/v1`);
 }
 
-bootstrap();
+void bootstrap();

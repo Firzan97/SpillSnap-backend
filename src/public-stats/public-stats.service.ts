@@ -67,8 +67,7 @@ export class PublicStatsService {
     private readonly subscriptionRepo: Repository<Subscription>,
     config: ConfigService,
   ) {
-    this.ttlMs =
-      config.get<number>('PUBLIC_STATS_TTL_MS') ?? 60 * 60 * 1000; // 1h
+    this.ttlMs = config.get<number>('PUBLIC_STATS_TTL_MS') ?? 60 * 60 * 1000; // 1h
   }
 
   async getStats(): Promise<PublicStatsResponseDto> {
@@ -133,10 +132,7 @@ export class PublicStatsService {
       this.userRepo.count({ where: { role: UserRole.FREE } }),
       this.subscriptionRepo.count({
         where: {
-          status: In([
-            SubscriptionStatus.ACTIVE,
-            SubscriptionStatus.TRIALING,
-          ]),
+          status: In([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
         },
       }),
       this.subscriptionRepo

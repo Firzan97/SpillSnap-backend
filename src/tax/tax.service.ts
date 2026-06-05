@@ -147,7 +147,9 @@ export class TaxService {
     values: Record<string, number>,
   ): Promise<ReliefSummaryResponseDto> {
     const targetYa = ya ?? resolveFilingPeriod().ya;
-    const allowed = new Set(manualReliefFieldsForYa(targetYa).map((f) => f.key));
+    const allowed = new Set(
+      manualReliefFieldsForYa(targetYa).map((f) => f.key),
+    );
 
     const clean: Record<string, number> = {};
     for (const [k, v] of Object.entries(values ?? {})) {

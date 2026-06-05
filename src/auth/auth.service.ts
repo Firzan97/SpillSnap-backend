@@ -84,7 +84,8 @@ export class AuthService {
       .replace(/\/(rest\/v1\/?|auth\/v1\/?)?$/, '');
     this.anonKey = config.getOrThrow<string>('SUPABASE_ANON_KEY');
     this.authRedirectUrl =
-      config.get<string>('APP_AUTH_REDIRECT_URL') ?? 'spendsnap://auth-callback';
+      config.get<string>('APP_AUTH_REDIRECT_URL') ??
+      'spendsnap://auth-callback';
   }
 
   /**
@@ -194,12 +195,9 @@ export class AuthService {
    * a session, so the client can use it to land the user signed in.
    */
   async resetPassword(accessToken: string, password: string) {
-    const user = await this.gotrueAuthed(
-      '/auth/v1/user',
-      'PUT',
-      accessToken,
-      { password },
-    );
+    const user = await this.gotrueAuthed('/auth/v1/user', 'PUT', accessToken, {
+      password,
+    });
     const profile = await this.syncFromSupabase(this.toPayload(user));
     return { access_token: accessToken, profile: this.toPublic(profile) };
   }
@@ -226,7 +224,10 @@ export class AuthService {
       throw new BadGatewayException('Could not reach Supabase Auth');
     }
 
-    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    const data = (await res.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
     if (!res.ok) {
       const message =
         (data.error_description as string) ||

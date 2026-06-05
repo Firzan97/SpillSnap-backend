@@ -1,4 +1,7 @@
-import { LhdnRelief, ReceiptCategory } from '../receipts/entities/receipt.entity';
+import {
+  LhdnRelief,
+  ReceiptCategory,
+} from '../receipts/entities/receipt.entity';
 
 /**
  * LHDN personal-relief rules, versioned per Year of Assessment (YA).
@@ -55,16 +58,58 @@ export const RELIEF_RULES: Record<number, YaRules> = {
     status: 'confirmed',
     buckets: [
       // Shared RM2,500 cap: lifestyle + books/journals (LHDN folds books in here).
-      { key: 'lifestyle', cap: 2500, label: 'Lifestyle', section: 'S46(1)(p)', members: [LhdnRelief.LIFESTYLE, LhdnRelief.BOOKS] },
+      {
+        key: 'lifestyle',
+        cap: 2500,
+        label: 'Lifestyle',
+        section: 'S46(1)(p)',
+        members: [LhdnRelief.LIFESTYLE, LhdnRelief.BOOKS],
+      },
       // Separate ADDITIONAL relief on top of lifestyle.
-      { key: 'sports', cap: 1000, label: 'Sports equipment & activity', section: 'S46(1)(p) sports', members: [LhdnRelief.SPORTS] },
+      {
+        key: 'sports',
+        cap: 1000,
+        label: 'Sports equipment & activity',
+        section: 'S46(1)(p) sports',
+        members: [LhdnRelief.SPORTS],
+      },
       // Restricted RM10,000; has internal sub-limits (vaccination/dental/full
       // exam capped at RM1,000 each within this total — not modelled yet).
-      { key: 'medical', cap: 10000, label: 'Medical (serious diseases)', section: 'S46(1)(d)', members: [LhdnRelief.MEDICAL] },
-      { key: 'ev_charging', cap: 2500, label: 'EV charging facilities', section: 'S46(1)(p) EV', members: [LhdnRelief.EV_CHARGING] },
-      { key: 'breastfeeding', cap: 1000, label: 'Breastfeeding equipment', section: 'S46(1)(q)', members: [LhdnRelief.BREASTFEEDING] },
-      { key: 'childcare', cap: 3000, label: 'Childcare centre / kindergarten', section: 'S46(1)(o)', members: [LhdnRelief.CHILDCARE] },
-      { key: 'education', cap: 7000, label: 'Education fees (self)', section: 'S46(1)(f)', members: [LhdnRelief.EDUCATION] },
+      {
+        key: 'medical',
+        cap: 10000,
+        label: 'Medical (serious diseases)',
+        section: 'S46(1)(d)',
+        members: [LhdnRelief.MEDICAL],
+      },
+      {
+        key: 'ev_charging',
+        cap: 2500,
+        label: 'EV charging facilities',
+        section: 'S46(1)(p) EV',
+        members: [LhdnRelief.EV_CHARGING],
+      },
+      {
+        key: 'breastfeeding',
+        cap: 1000,
+        label: 'Breastfeeding equipment',
+        section: 'S46(1)(q)',
+        members: [LhdnRelief.BREASTFEEDING],
+      },
+      {
+        key: 'childcare',
+        cap: 3000,
+        label: 'Childcare centre / kindergarten',
+        section: 'S46(1)(o)',
+        members: [LhdnRelief.CHILDCARE],
+      },
+      {
+        key: 'education',
+        cap: 7000,
+        label: 'Education fees (self)',
+        section: 'S46(1)(f)',
+        members: [LhdnRelief.EDUCATION],
+      },
     ],
   },
 };
@@ -75,11 +120,12 @@ export const RELIEF_RULES: Record<number, YaRules> = {
  * relief category for the obvious cases. Anything not here is ambiguous and
  * falls through to the AI classifier (Step 2).
  */
-export const CATEGORY_TO_RELIEF: Partial<Record<ReceiptCategory, LhdnRelief>> = {
-  [ReceiptCategory.MEDICAL]: LhdnRelief.MEDICAL,
-  [ReceiptCategory.BOOKS]: LhdnRelief.BOOKS,
-  [ReceiptCategory.SPORTS]: LhdnRelief.SPORTS,
-};
+export const CATEGORY_TO_RELIEF: Partial<Record<ReceiptCategory, LhdnRelief>> =
+  {
+    [ReceiptCategory.MEDICAL]: LhdnRelief.MEDICAL,
+    [ReceiptCategory.BOOKS]: LhdnRelief.BOOKS,
+    [ReceiptCategory.SPORTS]: LhdnRelief.SPORTS,
+  };
 
 /**
  * Rules for a YA. If that year isn't in the table yet (Budget not announced),

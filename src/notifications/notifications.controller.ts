@@ -37,10 +37,26 @@ export class NotificationsController {
 
   // GET /notifications?page=1&limit=30
   @Get()
-  @ApiOperation({ summary: 'List the current user’s notifications (newest first) + unread count' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default 1' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default 30, max 100' })
-  @ApiResponse({ status: 200, description: 'Paginated notifications + unread count' })
+  @ApiOperation({
+    summary:
+      'List the current user’s notifications (newest first) + unread count',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Default 1',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Default 30, max 100',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated notifications + unread count',
+  })
   list(
     @CurrentUser() user: User,
     @Query('page') page?: string,
@@ -71,13 +87,18 @@ export class NotificationsController {
 
   // POST /notifications/broadcast — admin only: push a product update to everyone.
   @Post('broadcast')
-  @ApiOperation({ summary: 'Broadcast a product update to all opted-in users (admin only)' })
+  @ApiOperation({
+    summary: 'Broadcast a product update to all opted-in users (admin only)',
+  })
   @ApiResponse({ status: 201, description: 'Number of users notified' })
   async broadcast(@CurrentUser() user: User, @Body() dto: BroadcastDto) {
     if (user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Admins only.');
     }
-    const sent = await this.scheduler.broadcastProductUpdate(dto.title, dto.body);
+    const sent = await this.scheduler.broadcastProductUpdate(
+      dto.title,
+      dto.body,
+    );
     return { sent };
   }
 }

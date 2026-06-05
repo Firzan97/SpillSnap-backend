@@ -33,7 +33,10 @@ export class DailyQuotaGuard implements CanActivate {
     const ent = await this.entitlements.resolve(user);
     if (ent.isPro) return true; // unlimited
 
-    const granted = await this.usage.tryConsume(user.id, FREE_DAILY_UPLOAD_LIMIT);
+    const granted = await this.usage.tryConsume(
+      user.id,
+      FREE_DAILY_UPLOAD_LIMIT,
+    );
     if (!granted) {
       throw new HttpException(
         {

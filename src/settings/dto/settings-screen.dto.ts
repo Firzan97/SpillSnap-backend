@@ -25,7 +25,9 @@ export class SettingsRowDto {
   @ApiPropertyOptional({ description: 'Secondary caption' })
   sub?: string;
 
-  @ApiPropertyOptional({ description: 'value rows: text; toggle rows: boolean; input: current text' })
+  @ApiPropertyOptional({
+    description: 'value rows: text; toggle rows: boolean; input: current text',
+  })
   value?: string | boolean | null;
 
   @ApiPropertyOptional({ description: 'toggle key (e.g. faceIdUnlock)' })
@@ -37,7 +39,9 @@ export class SettingsRowDto {
   @ApiPropertyOptional({ description: 'navigation target screen id' })
   target?: string;
 
-  @ApiPropertyOptional({ description: 'action id (e.g. signOut, changePassword)' })
+  @ApiPropertyOptional({
+    description: 'action id (e.g. signOut, changePassword)',
+  })
   action?: string;
 
   @ApiPropertyOptional({ enum: ['default', 'primary', 'danger'] })

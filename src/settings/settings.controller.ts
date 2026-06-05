@@ -106,7 +106,8 @@ export class SettingsController {
   })
   @ApiOperation({
     summary: 'Upload / replace profile photo',
-    description: 'Stores the image in the public avatar bucket and sets avatarUrl.',
+    description:
+      'Stores the image in the public avatar bucket and sets avatarUrl.',
   })
   @ApiResponse({ status: 201, description: 'Updated account' })
   @ApiResponse({ status: 400, description: 'Missing or invalid image' })
@@ -116,7 +117,9 @@ export class SettingsController {
   ) {
     if (!avatar) throw new BadRequestException('An image file is required');
     if (!AVATAR_MIME.test(avatar.mimetype)) {
-      throw new BadRequestException(`Unsupported image type: ${avatar.mimetype}`);
+      throw new BadRequestException(
+        `Unsupported image type: ${avatar.mimetype}`,
+      );
     }
     if (avatar.size > MAX_AVATAR_BYTES) {
       throw new BadRequestException('Avatar must be 5 MB or smaller');

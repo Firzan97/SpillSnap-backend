@@ -94,7 +94,10 @@ export class DashboardService {
 
     // ── Spending totals (in the user's base currency) ─────────────────────────
     const baseAmt = (r: Receipt) => Number(r.baseAmount ?? r.amount);
-    const currentTotal = currentMonthReceipts.reduce((s, r) => s + baseAmt(r), 0);
+    const currentTotal = currentMonthReceipts.reduce(
+      (s, r) => s + baseAmt(r),
+      0,
+    );
     const prevTotal = prevMonthReceipts.reduce((s, r) => s + baseAmt(r), 0);
     const changeVsPrev =
       prevTotal === 0 ? 0 : ((currentTotal - prevTotal) / prevTotal) * 100;

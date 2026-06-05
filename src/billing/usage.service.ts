@@ -38,7 +38,9 @@ export class UsageService {
    */
   async tryConsume(userId: string, limit: number): Promise<boolean> {
     const day = malaysiaDay();
-    const result = (await this.repo.query(
+    // repo.query is typed `Promise<any>`; the result is the array of RETURNING
+    // rows (empty when the WHERE predicate blocked the upsert).
+    const result: unknown[] = await this.repo.query(
       `INSERT INTO daily_usage (user_id, day, count)
        VALUES ($1, $2, 1)
        ON CONFLICT (user_id, day)
@@ -46,7 +48,7 @@ export class UsageService {
        WHERE daily_usage.count < $3
        RETURNING count`,
       [userId, day, limit],
-    )) as { count: number }[];
+    );
 
     return result.length > 0;
   }

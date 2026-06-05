@@ -19,7 +19,9 @@ export class StripeService {
   private readonly priceByInterval: Record<BillingInterval, string | undefined>;
 
   constructor(private readonly config: ConfigService) {
-    this.stripe = new Stripe(this.config.getOrThrow<string>('STRIPE_SECRET_KEY'));
+    this.stripe = new Stripe(
+      this.config.getOrThrow<string>('STRIPE_SECRET_KEY'),
+    );
     this.webhookSecret = this.config.getOrThrow<string>(
       'STRIPE_WEBHOOK_SECRET',
     );
@@ -117,10 +119,7 @@ export class StripeService {
   }
 
   /** Verify the signature and parse a webhook payload from its raw body. */
-  constructEvent(
-    rawBody: Buffer,
-    signature: string | undefined,
-  ): Stripe.Event {
+  constructEvent(rawBody: Buffer, signature: string | undefined): Stripe.Event {
     if (!signature) {
       throw new BadRequestException('Missing Stripe-Signature header');
     }

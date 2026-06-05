@@ -139,7 +139,9 @@ export class SettingsService {
   /** Clear the profile photo, removing the stored object if we own it. */
   async removeAvatar(user: User) {
     if (user.avatarUrl) await this.storage.removeAvatar(user.avatarUrl);
-    const updated = await this.usersService.update(user.id, { avatarUrl: null });
+    const updated = await this.usersService.update(user.id, {
+      avatarUrl: null,
+    });
     return this.account(updated);
   }
 

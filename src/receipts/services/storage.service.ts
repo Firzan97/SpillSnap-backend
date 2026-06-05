@@ -1,6 +1,10 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
 const SIGNED_URL_TTL = 60 * 60; // 1 hour
@@ -21,7 +25,7 @@ const EXT_BY_MIME: Record<string, string> = {
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private readonly client: SupabaseClient;
+  private readonly client: ReturnType<typeof createClient>;
   private readonly bucket: string;
   /** Public bucket for profile avatars (objects served via a stable public URL). */
   private readonly avatarBucket: string;
@@ -96,7 +100,8 @@ export class StorageService {
     const { error } = await this.client.storage
       .from(this.avatarBucket)
       .remove([path]);
-    if (error) this.logger.warn(`Avatar delete failed for ${path}: ${error.message}`);
+    if (error)
+      this.logger.warn(`Avatar delete failed for ${path}: ${error.message}`);
   }
 
   /** Turn a stored path into a temporary, client-usable URL. */

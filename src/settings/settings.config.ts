@@ -11,11 +11,45 @@ import { User } from '../users/entities/user.entity';
 
 // ── Public row schema (what the client receives) ─────────────────────────────
 export type SettingsRow =
-  | { id: string; type: 'value'; label: string; value: string | null; sub?: string }
-  | { id: string; type: 'input'; label: string; field: string; value: string | null; sub?: string }
-  | { id: string; type: 'toggle'; label: string; key: string; value: boolean; sub?: string }
-  | { id: string; type: 'navigation'; label: string; target: string; sub?: string; value?: string }
-  | { id: string; type: 'action'; label: string; action: string; tone?: 'default' | 'primary' | 'danger'; sub?: string }
+  | {
+      id: string;
+      type: 'value';
+      label: string;
+      value: string | null;
+      sub?: string;
+    }
+  | {
+      id: string;
+      type: 'input';
+      label: string;
+      field: string;
+      value: string | null;
+      sub?: string;
+    }
+  | {
+      id: string;
+      type: 'toggle';
+      label: string;
+      key: string;
+      value: boolean;
+      sub?: string;
+    }
+  | {
+      id: string;
+      type: 'navigation';
+      label: string;
+      target: string;
+      sub?: string;
+      value?: string;
+    }
+  | {
+      id: string;
+      type: 'action';
+      label: string;
+      action: string;
+      tone?: 'default' | 'primary' | 'danger';
+      sub?: string;
+    }
   | { id: string; type: 'link'; label: string; url: string; sub?: string };
 
 export interface SettingsSection {
@@ -64,12 +98,16 @@ interface ManifestSection {
 function isActive(row: Gated, platform?: Platform): boolean {
   if (row.phase && row.phase > ACTIVE_PHASE) return false;
   if (row.flag && !SETTINGS_FLAGS[row.flag]) return false;
-  if (row.platforms && (!platform || !row.platforms.includes(platform))) return false;
+  if (row.platforms && (!platform || !row.platforms.includes(platform)))
+    return false;
   return true;
 }
 
 /** Drop gated-out rows, strip backend-only fields, and remove empty sections. */
-function resolve(sections: ManifestSection[], platform?: Platform): SettingsSection[] {
+function resolve(
+  sections: ManifestSection[],
+  platform?: Platform,
+): SettingsSection[] {
   return sections
     .map((s) => ({
       title: s.title,
@@ -91,19 +129,69 @@ export function buildSettingsIndex(platform?: Platform): SettingsScreen {
   const sections: ManifestSection[] = [
     {
       rows: [
-        { id: 'account', type: 'navigation', label: 'Account & security', target: 'settings-account', sub: 'Profile, Face ID, password' },
-        { id: 'categories', type: 'navigation', label: 'Categories', target: 'settings-categories', sub: 'Spending breakdown' },
-        { id: 'notifications', type: 'navigation', label: 'Notifications', target: 'settings-notifications', sub: 'Reminders & alerts' },
-        { id: 'export', type: 'navigation', label: 'Export data', target: 'settings-export', sub: 'CSV for LHDN e-Filing' },
+        {
+          id: 'account',
+          type: 'navigation',
+          label: 'Account & security',
+          target: 'settings-account',
+          sub: 'Profile, Face ID, password',
+        },
+        {
+          id: 'categories',
+          type: 'navigation',
+          label: 'Categories',
+          target: 'settings-categories',
+          sub: 'Spending breakdown',
+        },
+        {
+          id: 'notifications',
+          type: 'navigation',
+          label: 'Notifications',
+          target: 'settings-notifications',
+          sub: 'Reminders & alerts',
+        },
+        {
+          id: 'export',
+          type: 'navigation',
+          label: 'Export data',
+          target: 'settings-export',
+          sub: 'CSV for LHDN e-Filing',
+        },
         // Phase 2 — appears when the lhdnRow flag is enabled.
-        { id: 'lhdn', type: 'navigation', label: 'LHDN profile', target: 'settings-lhdn', sub: 'Tax identity & reliefs', flag: 'lhdnRow' },
-        { id: 'help', type: 'navigation', label: 'Help & support', target: 'settings-help', sub: 'FAQ, contact, legal' },
+        {
+          id: 'lhdn',
+          type: 'navigation',
+          label: 'LHDN profile',
+          target: 'settings-lhdn',
+          sub: 'Tax identity & reliefs',
+          flag: 'lhdnRow',
+        },
+        {
+          id: 'help',
+          type: 'navigation',
+          label: 'Help & support',
+          target: 'settings-help',
+          sub: 'FAQ, contact, legal',
+        },
       ],
     },
     {
       rows: [
-        { id: 'sign-out', type: 'action', label: 'Sign out', action: 'signOut', tone: 'default' },
-        { id: 'delete-account', type: 'action', label: 'Delete account', action: 'deleteAccount', tone: 'danger', phase: 2 },
+        {
+          id: 'sign-out',
+          type: 'action',
+          label: 'Sign out',
+          action: 'signOut',
+          tone: 'default',
+        },
+        {
+          id: 'delete-account',
+          type: 'action',
+          label: 'Delete account',
+          action: 'deleteAccount',
+          tone: 'danger',
+          phase: 2,
+        },
       ],
     },
   ];
@@ -120,20 +208,67 @@ export function buildAccountScreen(
     {
       title: 'Profile',
       rows: [
-        { id: 'name', type: 'input', label: 'Name', field: 'name', value: user.name },
-        { id: 'phone', type: 'input', label: 'Phone', field: 'phone', value: user.phone ?? null, sub: 'For account recovery' },
-        { id: 'email', type: 'value', label: 'Email', value: user.email, sub: 'Verified' },
+        {
+          id: 'name',
+          type: 'input',
+          label: 'Name',
+          field: 'name',
+          value: user.name,
+        },
+        {
+          id: 'phone',
+          type: 'input',
+          label: 'Phone',
+          field: 'phone',
+          value: user.phone ?? null,
+          sub: 'For account recovery',
+        },
+        {
+          id: 'email',
+          type: 'value',
+          label: 'Email',
+          value: user.email,
+          sub: 'Verified',
+        },
       ],
     },
     {
       title: 'Security',
       rows: [
         // Face ID is iOS-only for now — hidden on Android/Web.
-        { id: 'face-id', type: 'toggle', label: 'Face ID unlock', key: 'faceIdUnlock', value: faceIdUnlock, sub: 'Require Face ID to open the app', platforms: ['ios'] },
-        { id: 'change-password', type: 'action', label: 'Change password', action: 'changePassword', tone: 'default' },
+        {
+          id: 'face-id',
+          type: 'toggle',
+          label: 'Face ID unlock',
+          key: 'faceIdUnlock',
+          value: faceIdUnlock,
+          sub: 'Require Face ID to open the app',
+          platforms: ['ios'],
+        },
+        {
+          id: 'change-password',
+          type: 'action',
+          label: 'Change password',
+          action: 'changePassword',
+          tone: 'default',
+        },
         // Phase 2
-        { id: 'two-factor', type: 'toggle', label: 'Two-factor authentication', key: 'twoFactor', value: false, sub: 'Extra login step', flag: 'twoFactor' },
-        { id: 'devices', type: 'navigation', label: 'Active devices', target: 'settings-devices', flag: 'deviceList' },
+        {
+          id: 'two-factor',
+          type: 'toggle',
+          label: 'Two-factor authentication',
+          key: 'twoFactor',
+          value: false,
+          sub: 'Extra login step',
+          flag: 'twoFactor',
+        },
+        {
+          id: 'devices',
+          type: 'navigation',
+          label: 'Active devices',
+          target: 'settings-devices',
+          flag: 'deviceList',
+        },
       ],
     },
   ];
@@ -147,21 +282,49 @@ export function buildHelpScreen(appVersion: string): SettingsScreen {
       title: 'Get help',
       rows: [
         { id: 'faq', type: 'link', label: 'FAQ', url: `${SITE}/faq` },
-        { id: 'guide', type: 'link', label: 'LHDN e-Filing guide', url: `${SITE}/lhdn-guide` },
-        { id: 'contact', type: 'link', label: 'Contact support', url: `mailto:${SUPPORT_EMAIL}`, sub: SUPPORT_EMAIL },
+        {
+          id: 'guide',
+          type: 'link',
+          label: 'LHDN e-Filing guide',
+          url: `${SITE}/lhdn-guide`,
+        },
+        {
+          id: 'contact',
+          type: 'link',
+          label: 'Contact support',
+          url: `mailto:${SUPPORT_EMAIL}`,
+          sub: SUPPORT_EMAIL,
+        },
       ],
     },
     {
       title: 'Legal',
       rows: [
-        { id: 'privacy', type: 'link', label: 'Privacy policy', url: `${SITE}/privacy` },
-        { id: 'terms', type: 'link', label: 'Terms of service', url: `${SITE}/terms` },
+        {
+          id: 'privacy',
+          type: 'link',
+          label: 'Privacy policy',
+          url: `${SITE}/privacy`,
+        },
+        {
+          id: 'terms',
+          type: 'link',
+          label: 'Terms of service',
+          url: `${SITE}/terms`,
+        },
         { id: 'pdpa', type: 'link', label: 'PDPA notice', url: `${SITE}/pdpa` },
       ],
     },
     {
       title: 'About',
-      rows: [{ id: 'version', type: 'value', label: 'App version', value: appVersion }],
+      rows: [
+        {
+          id: 'version',
+          type: 'value',
+          label: 'App version',
+          value: appVersion,
+        },
+      ],
     },
   ];
   return { title: 'Help & support', sections: resolve(sections) };

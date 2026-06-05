@@ -177,19 +177,22 @@ export class ReliefBackfillService {
         model: MODEL,
         max_tokens: 2048,
         system: [
-          { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+          {
+            type: 'text',
+            text: SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
         ],
         tools: [{ ...tool, cache_control: { type: 'ephemeral' } }],
         tool_choice: { type: 'tool', name: 'classify_reliefs' },
-        messages: [
-          { role: 'user', content: JSON.stringify(input) },
-        ],
+        messages: [{ role: 'user', content: JSON.stringify(input) }],
       });
 
       const toolUse = message.content.find(
         (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
       );
-      const results = (toolUse?.input as { results?: ClassifyResult[] })?.results;
+      const results = (toolUse?.input as { results?: ClassifyResult[] })
+        ?.results;
       return Array.isArray(results) ? results : [];
     } catch (err) {
       // Don't fail the whole back-fill on one bad batch — skip it (those stay

@@ -369,7 +369,8 @@ export class ReceiptsService {
       sstAmount: r.sstAmount !== null ? Number(r.sstAmount) : null,
       currency: r.currency,
       baseCurrency: r.baseCurrency ?? r.currency,
-      baseAmount: r.baseAmount !== null ? Number(r.baseAmount) : Number(r.amount),
+      baseAmount:
+        r.baseAmount !== null ? Number(r.baseAmount) : Number(r.amount),
       fxRate: r.fxRate !== null ? Number(r.fxRate) : 1,
       category: r.category,
       receiptDate: r.receiptDate,

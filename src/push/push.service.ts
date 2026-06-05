@@ -97,7 +97,7 @@ export class PushService {
             ) {
               return this.repo.delete({ token: chunk[i].to as string });
             }
-            return undefined;
+            return Promise.resolve();
           }),
         );
       } catch (err) {

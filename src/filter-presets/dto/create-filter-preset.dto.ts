@@ -9,7 +9,10 @@ import {
 } from 'class-validator';
 
 export class CreateFilterPresetDto {
-  @ApiProperty({ example: 'Groceries 2025', description: 'Display name for the saved filter' })
+  @ApiProperty({
+    example: 'Groceries 2025',
+    description: 'Display name for the saved filter',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(40)
@@ -20,7 +23,11 @@ export class CreateFilterPresetDto {
   @IsOptional()
   year?: string;
 
-  @ApiProperty({ type: [String], example: ['groceries', 'dining'], default: [] })
+  @ApiProperty({
+    type: [String],
+    example: ['groceries', 'dining'],
+    default: [],
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()

@@ -30,9 +30,7 @@ export class FilterPresetsService {
     const name = dto.name.trim();
     const existing = await this.repo.findOne({ where: { userId, name } });
     if (existing) {
-      throw new ConflictException(
-        `A filter named "${name}" already exists.`,
-      );
+      throw new ConflictException(`A filter named "${name}" already exists.`);
     }
     const preset = this.repo.create({
       userId,

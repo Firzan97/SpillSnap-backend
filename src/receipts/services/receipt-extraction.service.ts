@@ -66,11 +66,13 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
     properties: {
       isReceipt: {
         type: 'boolean',
-        description: 'True only if the image is a real purchase receipt or invoice',
+        description:
+          'True only if the image is a real purchase receipt or invoice',
       },
       rejectReason: {
         type: 'string',
-        description: 'Short friendly reason when isReceipt is false; empty otherwise',
+        description:
+          'Short friendly reason when isReceipt is false; empty otherwise',
       },
       merchant: { type: 'string' },
       receiptDate: {
@@ -153,7 +155,9 @@ export class ReceiptExtractionService {
     try {
       return await this.run(ACCURATE_MODEL, files);
     } catch (err) {
-      this.logger.warn(`Escalation failed, using fast result: ${err.message}`);
+      this.logger.warn(
+        `Escalation failed, using fast result: ${(err as Error).message}`,
+      );
       return fast;
     }
   }
@@ -183,7 +187,11 @@ export class ReceiptExtractionService {
         max_tokens: 2048,
         // Cache the system prompt + tool schema — identical on every call.
         system: [
-          { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+          {
+            type: 'text',
+            text: SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
         ],
         tools: [{ ...EXTRACTION_TOOL, cache_control: { type: 'ephemeral' } }],
         tool_choice: { type: 'tool', name: 'save_receipt' },
@@ -246,7 +254,8 @@ export class ReceiptExtractionService {
       location: str(raw.location),
       items,
       suggestedCategory:
-        (str(raw.suggestedCategory) as ReceiptCategory) ?? ReceiptCategory.OTHER,
+        (str(raw.suggestedCategory) as ReceiptCategory) ??
+        ReceiptCategory.OTHER,
       suggestedRelief:
         (str(raw.suggestedRelief) as LhdnRelief) ?? LhdnRelief.NONE,
       taxEligible: raw.taxEligible === true,

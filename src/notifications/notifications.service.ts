@@ -52,7 +52,9 @@ export class NotificationsService {
       await this.users.update(userId, { hasUnreadNotifications: true });
       await this.maybePush(userId, input);
     } catch (err) {
-      this.logger.warn(`notify failed for ${userId}: ${(err as Error).message}`);
+      this.logger.warn(
+        `notify failed for ${userId}: ${(err as Error).message}`,
+      );
     }
   }
 

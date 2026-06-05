@@ -58,19 +58,24 @@ export class ReceiptsController {
         images: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description: 'One or more photos. Multiple = sections of one long receipt.',
+          description:
+            'One or more photos. Multiple = sections of one long receipt.',
         },
       },
     },
   })
   @ApiOperation({
-    summary: 'Capture: upload receipt photo(s), extract fields, return an unsaved draft',
+    summary:
+      'Capture: upload receipt photo(s), extract fields, return an unsaved draft',
     description:
       'Stores the image(s) and runs OCR/vision extraction. Pass multiple images for a long receipt photographed in sections — they are merged into one receipt. Returns the extracted draft plus an imagePath to echo back when saving. Does NOT persist a receipt.',
   })
   @ApiResponse({ status: 200, description: 'Extracted draft' })
   @ApiResponse({ status: 400, description: 'Missing or invalid image file(s)' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid Supabase token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid Supabase token',
+  })
   @ApiResponse({
     status: 402,
     description: 'Free daily upload limit reached — upgrade to Pro',
@@ -89,7 +94,9 @@ export class ReceiptsController {
     }
     for (const img of images) {
       if (!ALLOWED_IMAGE.test(img.mimetype)) {
-        throw new BadRequestException(`Unsupported image type: ${img.mimetype}`);
+        throw new BadRequestException(
+          `Unsupported image type: ${img.mimetype}`,
+        );
       }
       if (img.size > MAX_IMAGE_BYTES) {
         throw new BadRequestException('Each image must be 15 MB or smaller');
@@ -102,10 +109,14 @@ export class ReceiptsController {
   @Get('streak')
   @ApiOperation({
     summary: 'Streak summary',
-    description: 'Current + longest snap streak and the last 7 days of snap activity.',
+    description:
+      'Current + longest snap streak and the last 7 days of snap activity.',
   })
   @ApiResponse({ status: 200, description: 'Streak summary' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid Supabase token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid Supabase token',
+  })
   streak(@CurrentUser() user: User) {
     return this.receiptsService.streak(user);
   }
@@ -120,7 +131,10 @@ export class ReceiptsController {
   })
   @ApiResponse({ status: 201, description: 'Receipt saved' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid Supabase token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid Supabase token',
+  })
   create(@CurrentUser() user: User, @Body() dto: CreateReceiptDto) {
     return this.receiptsService.create(user, dto);
   }
@@ -133,7 +147,10 @@ export class ReceiptsController {
       'Filter by category, taxEligible, bookmarked, search (merchant), and date range. Paginated, newest first.',
   })
   @ApiResponse({ status: 200, description: 'Paginated receipts' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid Supabase token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid Supabase token',
+  })
   list(@CurrentUser() user: User, @Query() query: ListReceiptsQueryDto) {
     return this.receiptsService.list(user, query);
   }
@@ -142,12 +159,12 @@ export class ReceiptsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a single receipt' })
   @ApiResponse({ status: 200, description: 'Receipt detail' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid Supabase token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid Supabase token',
+  })
   @ApiResponse({ status: 404, description: 'Receipt not found' })
-  findOne(
-    @CurrentUser() user: User,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  findOne(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
     return this.receiptsService.findOne(user, id);
   }
 
@@ -158,7 +175,10 @@ export class ReceiptsController {
     description: 'Edit any field or toggle the bookmark.',
   })
   @ApiResponse({ status: 200, description: 'Updated receipt' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid Supabase token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid Supabase token',
+  })
   @ApiResponse({ status: 404, description: 'Receipt not found' })
   update(
     @CurrentUser() user: User,
@@ -173,12 +193,12 @@ export class ReceiptsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a receipt and its stored image' })
   @ApiResponse({ status: 204, description: 'Deleted' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid Supabase token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid Supabase token',
+  })
   @ApiResponse({ status: 404, description: 'Receipt not found' })
-  remove(
-    @CurrentUser() user: User,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  remove(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
     return this.receiptsService.remove(user, id);
   }
 }

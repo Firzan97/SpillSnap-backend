@@ -10,10 +10,16 @@ export class ReliefBucketSummaryDto {
   @ApiProperty({ example: 'S46(1)(p)', description: 'LHDN section reference' })
   section: string;
 
-  @ApiProperty({ example: 2500, description: 'RM cap for this bucket in this YA' })
+  @ApiProperty({
+    example: 2500,
+    description: 'RM cap for this bucket in this YA',
+  })
   cap: number;
 
-  @ApiProperty({ example: 1840.5, description: 'Total spent toward this bucket' })
+  @ApiProperty({
+    example: 1840.5,
+    description: 'Total spent toward this bucket',
+  })
   spent: number;
 
   @ApiProperty({
@@ -22,13 +28,22 @@ export class ReliefBucketSummaryDto {
   })
   claimable: number;
 
-  @ApiProperty({ example: 659.5, description: 'Cap headroom left (cap − claimable)' })
+  @ApiProperty({
+    example: 659.5,
+    description: 'Cap headroom left (cap − claimable)',
+  })
   remaining: number;
 
-  @ApiProperty({ example: 74, description: 'Claimable as % of cap (drives the "cap nearing" alert)' })
+  @ApiProperty({
+    example: 74,
+    description: 'Claimable as % of cap (drives the "cap nearing" alert)',
+  })
   pct: number;
 
-  @ApiProperty({ example: 12, description: 'Receipts contributing to this bucket' })
+  @ApiProperty({
+    example: 12,
+    description: 'Receipts contributing to this bucket',
+  })
   receiptCount: number;
 }
 
@@ -48,24 +63,45 @@ export class ManualReliefItemDto {
   @ApiProperty({ example: 'amount', enum: ['amount', 'toggle', 'count'] })
   type: 'amount' | 'toggle' | 'count';
 
-  @ApiProperty({ example: 4000, nullable: true, description: "'amount' max claimable" })
+  @ApiProperty({
+    example: 4000,
+    nullable: true,
+    description: "'amount' max claimable",
+  })
   cap: number | null;
 
-  @ApiProperty({ example: null, nullable: true, description: "'toggle' fixed relief RM" })
+  @ApiProperty({
+    example: null,
+    nullable: true,
+    description: "'toggle' fixed relief RM",
+  })
   amount: number | null;
 
-  @ApiProperty({ example: null, nullable: true, description: "'count' relief RM per dependent" })
+  @ApiProperty({
+    example: null,
+    nullable: true,
+    description: "'count' relief RM per dependent",
+  })
   perUnit: number | null;
 
-  @ApiProperty({ example: 4000, description: 'Stored raw value (RM, 0/1, or count)' })
+  @ApiProperty({
+    example: 4000,
+    description: 'Stored raw value (RM, 0/1, or count)',
+  })
   value: number;
 
-  @ApiProperty({ example: 4000, description: 'Claimable RM this field contributes' })
+  @ApiProperty({
+    example: 4000,
+    description: 'Claimable RM this field contributes',
+  })
   claimable: number;
 }
 
 export class ReliefSummaryResponseDto {
-  @ApiProperty({ example: 2025, description: 'Year of Assessment this summary covers' })
+  @ApiProperty({
+    example: 2025,
+    description: 'Year of Assessment this summary covers',
+  })
   ya: number;
 
   @ApiProperty({
@@ -84,7 +120,10 @@ export class ReliefSummaryResponseDto {
   })
   mode: 'filing' | 'tracking';
 
-  @ApiProperty({ example: '2026-04-30', description: 'e-Filing deadline for this YA (Apr 30 of YA+1)' })
+  @ApiProperty({
+    example: '2026-04-30',
+    description: 'e-Filing deadline for this YA (Apr 30 of YA+1)',
+  })
   deadline: string;
 
   @ApiProperty({
@@ -99,11 +138,15 @@ export class ReliefSummaryResponseDto {
 
   @ApiProperty({
     type: [ManualReliefItemDto],
-    description: 'Optional non-receipt reliefs the user can fill in (EPF, insurance, dependents, etc.).',
+    description:
+      'Optional non-receipt reliefs the user can fill in (EPF, insurance, dependents, etc.).',
   })
   manualReliefs: ManualReliefItemDto[];
 
-  @ApiProperty({ example: 7000, description: 'Sum of claimable from manual reliefs' })
+  @ApiProperty({
+    example: 7000,
+    description: 'Sum of claimable from manual reliefs',
+  })
   manualClaimable: number;
 
   @ApiProperty({

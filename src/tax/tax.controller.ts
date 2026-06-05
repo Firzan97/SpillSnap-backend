@@ -27,7 +27,10 @@ import { TaxService } from './tax.service';
 /** Parse an optional ?ya= string into a valid YA, or undefined. */
 function parseYa(ya?: string): number | undefined {
   const parsed = ya ? Number.parseInt(ya, 10) : undefined;
-  return parsed != null && Number.isFinite(parsed) && parsed >= 2000 && parsed <= 2100
+  return parsed != null &&
+    Number.isFinite(parsed) &&
+    parsed >= 2000 &&
+    parsed <= 2100
     ? parsed
     : undefined;
 }
@@ -68,7 +71,12 @@ export class TaxController {
     description:
       'Stores user-entered reliefs that no receipt can capture (EPF, life/medical insurance, PRS, SOCSO, SSPN, housing-loan interest, plus disability/spouse/children status). All optional — improves the estimate but can be skipped. Returns the recomputed relief summary.',
   })
-  @ApiQuery({ name: 'ya', required: false, example: 2025, description: 'Year of Assessment. Omit to use the active YA.' })
+  @ApiQuery({
+    name: 'ya',
+    required: false,
+    example: 2025,
+    description: 'Year of Assessment. Omit to use the active YA.',
+  })
   @ApiOkResponse({ type: ReliefSummaryResponseDto })
   updateManualReliefs(
     @CurrentUser() user: User,

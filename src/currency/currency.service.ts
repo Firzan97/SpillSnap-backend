@@ -52,7 +52,11 @@ export class CurrencyService {
    * Convert `amount` from `from` currency into `base`. Returns the base amount
    * (rounded to 2dp) plus the multiplier used. Same currency → rate 1.
    */
-  async convert(amount: number, from: string, base: string): Promise<Conversion> {
+  async convert(
+    amount: number,
+    from: string,
+    base: string,
+  ): Promise<Conversion> {
     const f = (from || base).toUpperCase();
     const b = base.toUpperCase();
     if (!Number.isFinite(amount)) return { baseAmount: 0, fxRate: 1 };

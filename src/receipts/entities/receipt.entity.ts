@@ -74,11 +74,23 @@ export class Receipt {
   baseCurrency: string | null;
 
   // Grand total expressed in the user's base currency (for cross-currency totals).
-  @Column({ name: 'base_amount', type: 'decimal', precision: 14, scale: 2, nullable: true })
+  @Column({
+    name: 'base_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
   baseAmount: number | null;
 
   // Multiplier used: baseAmount = amount * fxRate. 1 when currency === base.
-  @Column({ name: 'fx_rate', type: 'decimal', precision: 18, scale: 8, nullable: true })
+  @Column({
+    name: 'fx_rate',
+    type: 'decimal',
+    precision: 18,
+    scale: 8,
+    nullable: true,
+  })
   fxRate: number | null;
 
   @Column({

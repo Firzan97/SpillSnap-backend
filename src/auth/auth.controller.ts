@@ -72,7 +72,10 @@ export class AuthController {
     description:
       'Always returns 200 regardless of whether the email exists, to avoid leaking which addresses are registered.',
   })
-  @ApiResponse({ status: 200, description: 'Reset email sent (if the account exists)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reset email sent (if the account exists)',
+  })
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);
   }
@@ -83,8 +86,14 @@ export class AuthController {
   @ApiOperation({
     summary: 'Set a new password using the recovery token from the reset link',
   })
-  @ApiResponse({ status: 200, description: 'Password updated + session/profile' })
-  @ApiResponse({ status: 401, description: 'Reset link expired or already used' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password updated + session/profile',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Reset link expired or already used',
+  })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.accessToken, dto.password);
   }

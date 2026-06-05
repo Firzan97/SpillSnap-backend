@@ -19,13 +19,24 @@ import { UsageService } from '../billing/usage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 const user = (over: Partial<User> = {}): User =>
-  ({ id: 'u1', streakCount: 0, longestStreak: 0, lastSnapAt: null, ...over }) as User;
+  ({
+    id: 'u1',
+    streakCount: 0,
+    longestStreak: 0,
+    lastSnapAt: null,
+    ...over,
+  }) as User;
 
 const file = { buffer: Buffer.from('img'), mimetype: 'image/jpeg' };
 
 describe('ReceiptsService', () => {
   let service: ReceiptsService;
-  let repo: { create: jest.Mock; save: jest.Mock; findOne: jest.Mock; remove: jest.Mock };
+  let repo: {
+    create: jest.Mock;
+    save: jest.Mock;
+    findOne: jest.Mock;
+    remove: jest.Mock;
+  };
   let storage: {
     uploadReceiptImage: jest.Mock;
     getSignedUrl: jest.Mock;
@@ -40,7 +51,12 @@ describe('ReceiptsService', () => {
   beforeEach(async () => {
     repo = {
       create: jest.fn((d) => d),
-      save: jest.fn(async (e) => ({ id: 'r1', createdAt: new Date(), updatedAt: new Date(), ...e })),
+      save: jest.fn(async (e) => ({
+        id: 'r1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...e,
+      })),
       findOne: jest.fn(),
       remove: jest.fn(),
     };
@@ -141,7 +157,11 @@ describe('ReceiptsService', () => {
         'u1',
         expect.objectContaining({ streakCount: 1, longestStreak: 1 }),
       );
-      expect(res).toMatchObject({ id: 'r1', amount: 460.08, imageUrl: 'signed://abc' });
+      expect(res).toMatchObject({
+        id: 'r1',
+        amount: 460.08,
+        imageUrl: 'signed://abc',
+      });
     });
 
     it('continues the streak on a consecutive day', async () => {

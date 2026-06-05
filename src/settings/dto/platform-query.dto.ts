@@ -10,7 +10,8 @@ import type { Platform } from '../settings.config';
 export class PlatformQueryDto {
   @ApiPropertyOptional({
     enum: ['ios', 'android', 'web'],
-    description: 'Client platform; iOS-only rows (e.g. Face ID) are hidden otherwise',
+    description:
+      'Client platform; iOS-only rows (e.g. Face ID) are hidden otherwise',
   })
   @IsOptional()
   @IsIn(['ios', 'android', 'web'])

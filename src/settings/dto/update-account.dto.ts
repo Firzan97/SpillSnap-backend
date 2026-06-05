@@ -30,7 +30,10 @@ export class UpdateAccountDto {
   @IsBoolean()
   faceIdUnlock?: boolean;
 
-  @ApiPropertyOptional({ description: 'Base/display currency (ISO 4217)', example: 'MYR' })
+  @ApiPropertyOptional({
+    description: 'Base/display currency (ISO 4217)',
+    example: 'MYR',
+  })
   @IsOptional()
   @IsIn(CURRENCY_CODES)
   baseCurrency?: string;

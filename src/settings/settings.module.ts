@@ -9,7 +9,11 @@ import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Receipt, UserTag]), UsersModule, ReceiptsModule],
+  imports: [
+    TypeOrmModule.forFeature([Receipt, UserTag]),
+    UsersModule,
+    ReceiptsModule,
+  ],
   controllers: [SettingsController],
   providers: [SettingsService, StorageService],
 })
