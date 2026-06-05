@@ -1,98 +1,114 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# SpendSnap Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API for **SpendSnap** — receipt scanning, LHDN tax tagging, and spend analytics for Malaysia. Built with [NestJS 11](https://nestjs.com/) + TypeScript, PostgreSQL (Supabase), and Claude vision for OCR.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Powers the SpendSnap mobile app (Expo) and the marketing/landing web app (Nuxt). Authentication is owned by **Supabase Auth** — this backend only verifies the access token Supabase issues and syncs the user.
 
-## Description
+## Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Concern        | Choice |
+|----------------|--------|
+| Framework      | NestJS 11 (Express platform) |
+| Language       | TypeScript 5.7 |
+| Database       | PostgreSQL via TypeORM 0.3 (Supabase-hosted) |
+| Auth           | Supabase Auth (login/SSO) + `passport-jwt` token verification |
+| Receipt OCR    | Claude vision (`@anthropic-ai/sdk`) |
+| Billing        | Stripe (web-sold Pro subscription, auto-renewing) |
+| File storage   | Supabase Storage (private `receipts` bucket, public `avatars` bucket) |
+| Push           | Expo Server SDK |
+| WhatsApp       | Meta Cloud API (Pro receipt capture — inert until configured) |
+| Cache          | ioredis (optional; public-stats cache) |
+| API docs       | Swagger (non-production only) |
 
-## Project setup
+## Features
 
-```bash
-$ npm install
-```
+The app is organized into feature modules under `src/`:
 
-## Compile and run the project
+- **auth** — verify Supabase token, sync user (Supabase owns login/SSO)
+- **receipts** — capture (Claude OCR extract), save, list, edit, delete
+- **dashboard** — home dashboard aggregation
+- **tax** — LHDN relief tagging, manual reliefs, YA relief rules
+- **export** — CSV export for LHDN e-Filing
+- **billing** — Stripe checkout + customer portal, entitlement, daily-usage throttle
+- **settings** — server-driven settings screens, categories, tags, notification prefs
+- **leaderboard** — receipt-upload leaderboard (podium, rankings, standing)
+- **notifications** / **push** — in-app feed + Expo push tokens
+- **filter-presets** — saved receipt filters
+- **currency** — multi-currency support (Pro)
+- **feedback** — testimonials store
+- **public-stats** — unauthenticated landing-page stats + approved testimonials (server-cached hourly)
+- **whatsapp** — Pro receipt upload via WhatsApp (Meta Cloud API)
 
-```bash
-# development
-$ npm run start
+## Prerequisites
 
-# watch mode
-$ npm run start:dev
+- **Node.js 20+** (production runs on Node 20)
+- **PostgreSQL** — a Supabase project (or local Postgres)
+- **Supabase** project (Auth + Storage)
+- **Anthropic API key** (receipt OCR)
+- **Stripe** account (billing) — optional for local dev
 
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Setup
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment
+cp .env.example .env
+# then fill in the values (see Environment below)
+
+# 3. Run
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+API boots at **`http://localhost:3000/api/v1`** (binds `0.0.0.0` so physical devices on the LAN can reach it at the machine's IP).
 
-## Resources
+Swagger docs (non-production only): **`http://localhost:3000/docs`**
 
-Check out a few resources that may come in handy when working with NestJS:
+## Environment
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+All variables are documented in [`.env.example`](.env.example). Key groups:
 
-## Support
+- **Database** — `DATABASE_URL` or discrete `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASS`/`DB_NAME`
+- **Supabase Auth** — `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (Google/Apple SSO is configured in the Supabase dashboard, not here)
+- **Storage** — `STORAGE_BUCKET` (private receipts), `AVATAR_BUCKET` (public avatars)
+- **Receipt OCR** — `ANTHROPIC_API_KEY`
+- **Billing** — `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL`
+- **App** — `PORT`, `NODE_ENV`, `FRONTEND_URL` (comma-separated list for CORS / Stripe redirect URLs)
+- **WhatsApp** — `WHATSAPP_*` (inert until phone-number ID + access token are set)
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+> `.env` is gitignored — never commit it. Only `.env.example` is tracked.
 
-## Stay in touch
+## Scripts
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+npm run start:dev    # watch mode
+npm run start:prod   # node dist/main (after npm run build)
+npm run build        # nest build → dist/
+npm run lint         # eslint --fix
+npm run format       # prettier
+npm run test         # unit tests (jest)
+npm run test:e2e     # e2e tests
+npm run test:cov     # coverage
+```
+
+## Database & migrations
+
+Schema is managed by TypeORM. `synchronize` is **on in dev, off in production** (`NODE_ENV=production`). Production schema changes are applied via the raw SQL files in [`migrations/`](migrations/), run in order:
+
+- `001-remove-apple-auth-provider.sql`
+- `002-receipt-image-paths.sql`
+- `003-lhdn-relief-add-childcare-education.sql`
+- `004-receipt-relief-provenance.sql`
+
+## Production notes
+
+Set **`NODE_ENV=production`** in prod — this disables Swagger and TypeORM `synchronize`, and enables Postgres SSL. `FRONTEND_URL` accepts a comma-separated origin list (apex, www, app subdomain).
+
+The Stripe webhook needs the **raw request body** (the app is created with `rawBody: true`) to verify signatures — keep that intact behind any proxy.
+
+Deployment (Exabytes VPS + Caddy + systemd) is documented in [`deploy/DEPLOY.md`](deploy/DEPLOY.md), with `deploy/Caddyfile`, `deploy/spendsnap-api.service`, and `deploy/deploy.sh`.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED — private project.
