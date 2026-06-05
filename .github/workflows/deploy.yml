@@ -37,4 +37,7 @@ jobs:
           script_stop: true # abort on first failed command
           script: |
             cd /opt/spendsnap-backend
+            # Run fresh each deploy (not from the repo's possibly-stale deploy.sh):
+            # clear the "dubious ownership" block for whichever user the CI logs in as.
+            git config --global --add safe.directory /opt/spendsnap-backend || true
             ./deploy/deploy.sh
