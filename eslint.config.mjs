@@ -31,13 +31,16 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'warn',
       // Allow destructuring-to-omit: `const { phase, ...row } = x` shouldn't
       // flag the named siblings as unused when a rest element captures the rest.
-      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { ignoreRestSiblings: true, argsIgnorePattern: '^_' },
+      ],
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
   {
     // Test mocks intentionally use loose typing (jest.fn returning `any`).
-    files: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
+    files: ['**/*.spec.ts', '**/*.e2e-spec.ts', 'test/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',

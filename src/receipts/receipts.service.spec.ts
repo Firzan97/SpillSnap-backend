@@ -17,6 +17,7 @@ import { StorageService } from './services/storage.service';
 import { ReceiptExtractionService } from './services/receipt-extraction.service';
 import { UsageService } from '../billing/usage.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CurrencyService } from '../currency/currency.service';
 
 const user = (over: Partial<User> = {}): User =>
   ({
@@ -98,6 +99,15 @@ describe('ReceiptsService', () => {
         { provide: UsersService, useValue: users },
         { provide: UsageService, useValue: usage },
         { provide: NotificationsService, useValue: notifications },
+        {
+          provide: CurrencyService,
+          useValue: {
+            convert: jest.fn(async (amount: number) => ({
+              baseAmount: amount,
+              fxRate: 1,
+            })),
+          },
+        },
       ],
     }).compile();
 
