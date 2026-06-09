@@ -308,7 +308,7 @@ export class AuthService {
     ).toLowerCase();
     const meta = payload.user_metadata ?? {};
     const name =
-      meta.full_name || meta.name || email.split('@')[0] || 'SpendSnap User';
+      meta.full_name || meta.name || email.split('@')[0] || 'SpillSnap User';
     const avatarUrl = meta.avatar_url ?? meta.picture ?? null;
     const authProvider = this.mapProvider(payload.app_metadata?.provider);
 

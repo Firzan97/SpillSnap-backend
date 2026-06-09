@@ -8,7 +8,7 @@ import {
   LeaderboardQueryDto,
 } from './dto/leaderboard-query.dto';
 
-// Podium / avatar palette mirrors the "SpendSnap Directions" leaderboard design.
+// Podium / avatar palette mirrors the "SpillSnap Directions" leaderboard design.
 const AVATAR_COLORS = [
   '#F472B6',
   '#A78BFA',

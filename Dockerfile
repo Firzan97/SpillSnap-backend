@@ -1,4 +1,4 @@
-# Optional: containerized build of the SpendSnap backend.
+# Optional: containerized build of the SpillSnap backend.
 # The primary deploy path (deploy/DEPLOY.md) runs Node directly via systemd —
 # this Dockerfile is here if you prefer Docker on the VPS or move to Cloud Run.
 

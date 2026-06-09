@@ -49,7 +49,7 @@ export const NOTIFICATION_GROUPS: {
     ],
   },
   {
-    title: 'From SpendSnap',
+    title: 'From SpillSnap',
     rows: [
       {
         key: 'product',

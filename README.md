@@ -1,8 +1,8 @@
-# SpendSnap Backend
+# SpillSnap Backend
 
-API for **SpendSnap** — receipt scanning, LHDN tax tagging, and spend analytics for Malaysia. Built with [NestJS 11](https://nestjs.com/) + TypeScript, PostgreSQL (Supabase), and Claude vision for OCR.
+API for **SpillSnap** — receipt scanning, LHDN tax tagging, and spend analytics for Malaysia. Built with [NestJS 11](https://nestjs.com/) + TypeScript, PostgreSQL (Supabase), and Claude vision for OCR.
 
-Powers the SpendSnap mobile app (Expo) and the marketing/landing web app (Nuxt). Authentication is owned by **Supabase Auth** — this backend only verifies the access token Supabase issues and syncs the user.
+Powers the SpillSnap mobile app (Expo) and the marketing/landing web app (Nuxt). Authentication is owned by **Supabase Auth** — this backend only verifies the access token Supabase issues and syncs the user.
 
 ## Stack
 

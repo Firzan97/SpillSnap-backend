@@ -225,8 +225,8 @@ export class ExportService {
 
   private filename(dateFrom?: string, dateTo?: string): string {
     if (dateFrom && dateTo) {
-      return `spendsnap-${ymd(new Date(dateFrom))}_${ymd(new Date(dateTo))}.csv`;
+      return `spillsnap-${ymd(new Date(dateFrom))}_${ymd(new Date(dateTo))}.csv`;
     }
-    return `spendsnap-all-${ymd(new Date())}.csv`;
+    return `spillsnap-all-${ymd(new Date())}.csv`;
   }
 }

@@ -43,7 +43,7 @@ async function bootstrap() {
   // Swagger — only in non-production
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('SpendSnap API')
+      .setTitle('SpillSnap API')
       .setDescription(
         'Receipt scanning, LHDN tax tagging, and spend analytics for Malaysia',
       )
@@ -103,7 +103,7 @@ async function bootstrap() {
   // Bind to all interfaces (not just loopback) so physical devices on the LAN
   // can reach the API at the machine's IP, e.g. http://192.168.x.x:PORT.
   await app.listen(port, '0.0.0.0');
-  console.log(`🚀 SpendSnap API running on http://localhost:${port}/api/v1`);
+  console.log(`🚀 SpillSnap API running on http://localhost:${port}/api/v1`);
 }
 
 void bootstrap();

@@ -119,8 +119,8 @@ function resolve(
 }
 
 // ── Static external destinations ─────────────────────────────────────────────
-const SUPPORT_EMAIL = 'support@spendsnap.my';
-const SITE = 'https://spendsnap.my';
+const SUPPORT_EMAIL = 'support@spillsnap.com';
+const SITE = 'https://spillsnap.com';
 
 // ── Screen builders ──────────────────────────────────────────────────────────
 

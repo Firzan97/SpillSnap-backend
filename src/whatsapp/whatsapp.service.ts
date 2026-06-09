@@ -117,7 +117,7 @@ export class WhatsappService {
       if (!user) {
         await this.sender.sendText(
           from,
-          "👋 This number isn't linked to a SpendSnap account. Open the app → Profile → Account & security and add this WhatsApp number, then try again.",
+          "👋 This number isn't linked to a SpillSnap account. Open the app → Profile → Account & security and add this WhatsApp number, then try again.",
         );
         return;
       }
@@ -125,7 +125,7 @@ export class WhatsappService {
       if (!ent.isPro) {
         await this.sender.sendText(
           from,
-          '📸 Sending receipts over WhatsApp is a SpendSnap Pro feature. Upgrade in the app to unlock it.',
+          '📸 Sending receipts over WhatsApp is a SpillSnap Pro feature. Upgrade in the app to unlock it.',
         );
         return;
       }
@@ -210,7 +210,7 @@ export class WhatsappService {
       const r = result.receipt;
       await this.sender.sendText(
         from,
-        `✅ Saved! *${r.merchant}* — ${r.currency} ${Number(r.amount).toFixed(2)}\nView it in the SpendSnap app.`,
+        `✅ Saved! *${r.merchant}* — ${r.currency} ${Number(r.amount).toFixed(2)}\nView it in the SpillSnap app.`,
       );
     } catch (e) {
       this.logger.error(

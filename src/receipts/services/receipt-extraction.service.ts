@@ -35,7 +35,7 @@ export interface ExtractedReceipt {
   confidence: number; // 0-100
 }
 
-const SYSTEM_PROMPT = `You are a receipt-extraction engine for SpendSnap, a Malaysian expense + tax app.
+const SYSTEM_PROMPT = `You are a receipt-extraction engine for SpillSnap, a Malaysian expense + tax app.
 Extract structured data from the receipt image and call the \`save_receipt\` tool exactly once.
 
 Rules:

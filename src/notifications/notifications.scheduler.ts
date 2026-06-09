@@ -116,7 +116,7 @@ export class NotificationsScheduler {
         title: 'Your week in receipts',
         body:
           count > 0
-            ? `You logged ${count} receipt${count === 1 ? '' : 's'} this week. Open SpendSnap for the full recap.`
+            ? `You logged ${count} receipt${count === 1 ? '' : 's'} this week. Open SpillSnap for the full recap.`
             : 'No receipts logged this week — snap one to get back on track.',
         data: { count },
         prefKey: 'weekly',

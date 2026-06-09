@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI agents working in the SpendSnap backend (NestJS + TypeORM + Supabase).
+Guidance for AI agents working in the SpillSnap backend (NestJS + TypeORM + Supabase).
 
 ## Rules
 

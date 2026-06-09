@@ -1,7 +1,7 @@
 /**
  * MANUAL (non-receipt) reliefs, versioned per Year of Assessment.
  *
- * SpendSnap derives most reliefs from snapped receipts (see relief-rules.config).
+ * SpillSnap derives most reliefs from snapped receipts (see relief-rules.config).
  * But several LHDN reliefs can never come from a receipt — they're read off an
  * annual statement (EPF, insurance, SSPN, housing-loan interest) or depend on
  * the taxpayer's status/dependents (disability, spouse, children). Those are

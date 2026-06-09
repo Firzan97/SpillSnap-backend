@@ -51,7 +51,7 @@ export interface YaRules {
 // caps and categories change annually. Only receipt-claimable reliefs are
 // modelled here (status-based reliefs like the RM9,000 personal relief, EPF,
 // PRS and housing-loan interest aren't driven by receipts, so they're out of
-// scope for SpendSnap).
+// scope for SpillSnap).
 export const RELIEF_RULES: Record<number, YaRules> = {
   2025: {
     ya: 2025,
