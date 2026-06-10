@@ -12,9 +12,9 @@ import {
   ReceiptCategory,
 } from '../entities/receipt.entity';
 
-// Cheap, accurate default; escalate to Opus when the model is unsure.
+// Cheap, accurate default; escalate to Sonnet (not Opus - too pricey) when unsure.
 const FAST_MODEL = 'claude-haiku-4-5-20251001';
-const ACCURATE_MODEL = 'claude-opus-4-8';
+const ACCURATE_MODEL = 'claude-sonnet-4-6';
 const CONFIDENCE_THRESHOLD = 70;
 
 export interface ExtractedReceipt {
@@ -40,13 +40,13 @@ Extract structured data from the receipt image and call the \`save_receipt\` too
 
 Rules:
 - isReceipt: FIRST decide whether the image actually IS a purchase receipt or invoice
-  (merchant + line items/total). Set isReceipt=false for anything else — selfies, random
+  (merchant + line items/total). Set isReceipt=false for anything else - selfies, random
   photos, screenshots of apps/chats, blank pages, ID cards, menus, handwritten notes.
   When isReceipt=false, set rejectReason to a short friendly reason (e.g. "This looks like a
   selfie, not a receipt") and leave the other fields at their defaults / 0.
 - Amounts are numbers only (no symbols). currency = the receipt's own ISO 4217 code, detected
   from its symbol/text (e.g. RM/MYR, $/USD, Rp/IDR, ฿/THB, S$/SGD, €/EUR, £/GBP, ¥/JPY).
-  Default to "MYR" only when no currency is shown. Do NOT convert amounts — report them exactly
+  Default to "MYR" only when no currency is shown. Do NOT convert amounts - report them exactly
   as printed in the receipt's own currency.
 - receiptDate: ISO 8601 with time if present (e.g. 2026-05-16T17:30:00). Null if absent.
 - items: one entry per purchased line. qty defaults to 1. unitPrice and total are the per-line figures.
@@ -123,13 +123,13 @@ export class ReceiptExtractionService {
   private readonly client: Anthropic;
 
   constructor(config: ConfigService) {
-    // getOrThrow only guards `undefined` — an empty value (e.g. `ANTHROPIC_API_KEY=`
+    // getOrThrow only guards `undefined` - an empty value (e.g. `ANTHROPIC_API_KEY=`
     // in .env) slips through and only surfaces later as an opaque 500 on capture.
     // Fail loudly at boot instead.
     const apiKey = config.get<string>('ANTHROPIC_API_KEY')?.trim();
     if (!apiKey) {
       throw new Error(
-        'ANTHROPIC_API_KEY is missing or empty — set a real key in the backend .env before starting.',
+        'ANTHROPIC_API_KEY is missing or empty - set a real key in the backend .env before starting.',
       );
     }
     this.client = new Anthropic({ apiKey });
@@ -138,22 +138,44 @@ export class ReceiptExtractionService {
   /**
    * Extract one receipt from one or more images. Multiple images are treated as
    * sequential top-to-bottom sections of a single (long) receipt and merged into
-   * one result by the model — no client-side stitching needed.
+   * one result by the model - no client-side stitching needed.
    */
   async extract(
     files: { buffer: Buffer; mimetype: string }[],
   ): Promise<ExtractedReceipt> {
-    const fast = await this.run(FAST_MODEL, files);
-    // Not a receipt — escalating for accuracy is pointless, reject straight away.
-    if (!fast.isReceipt) return fast;
-    if (fast.confidence >= CONFIDENCE_THRESHOLD) return fast;
+    // Timing breakdown so we can see where a slow scan spends its time:
+    // payload size, the fast pass, and (if it happens) the accurate escalation.
+    const totalBytes = files.reduce((s, f) => s + f.buffer.byteLength, 0);
+    const t0 = Date.now();
 
-    // Low confidence — retry once on the stronger model.
+    const fast = await this.run(FAST_MODEL, files);
+    const tFast = Date.now() - t0;
+
+    // Not a receipt - escalating for accuracy is pointless, reject straight away.
+    if (!fast.isReceipt) {
+      this.logger.log(
+        `[scan] images=${files.length} ${(totalBytes / 1024).toFixed(0)}KB fast=${tFast}ms rejected=not-a-receipt`,
+      );
+      return fast;
+    }
+    if (fast.confidence >= CONFIDENCE_THRESHOLD) {
+      this.logger.log(
+        `[scan] images=${files.length} ${(totalBytes / 1024).toFixed(0)}KB fast=${tFast}ms conf=${fast.confidence} escalated=no`,
+      );
+      return fast;
+    }
+
+    // Low confidence - retry once on the stronger model.
     this.logger.log(
       `Confidence ${fast.confidence} < ${CONFIDENCE_THRESHOLD}; escalating to ${ACCURATE_MODEL}`,
     );
+    const tEsc = Date.now();
     try {
-      return await this.run(ACCURATE_MODEL, files);
+      const accurate = await this.run(ACCURATE_MODEL, files);
+      this.logger.log(
+        `[scan] images=${files.length} ${(totalBytes / 1024).toFixed(0)}KB fast=${tFast}ms accurate=${Date.now() - tEsc}ms total=${Date.now() - t0}ms escalated=yes`,
+      );
+      return accurate;
     } catch (err) {
       this.logger.warn(
         `Escalation failed, using fast result: ${(err as Error).message}`,
@@ -177,15 +199,16 @@ export class ReceiptExtractionService {
 
     const instruction =
       files.length > 1
-        ? `These ${files.length} images are sequential top-to-bottom sections of ONE single receipt (a long receipt photographed in parts). Combine them and extract the receipt exactly once — merge all line items in order and use the grand total from the final section.`
+        ? `These ${files.length} images are sequential top-to-bottom sections of ONE single receipt (a long receipt photographed in parts). Combine them and extract the receipt exactly once - merge all line items in order and use the grand total from the final section.`
         : 'Extract this receipt.';
 
     let message: Anthropic.Message;
+    const apiStart = Date.now();
     try {
       message = await this.client.messages.create({
         model,
         max_tokens: 2048,
-        // Cache the system prompt + tool schema — identical on every call.
+        // Cache the system prompt + tool schema - identical on every call.
         system: [
           {
             type: 'text',
@@ -213,6 +236,12 @@ export class ReceiptExtractionService {
         'Receipt scanning is temporarily unavailable. Please try again in a moment.',
       );
     }
+
+    // model-only latency + token usage, to separate model time from network/encoding.
+    const u = message.usage;
+    this.logger.log(
+      `[scan] ${model} api=${Date.now() - apiStart}ms in=${u.input_tokens} out=${u.output_tokens} cacheRead=${u.cache_read_input_tokens ?? 0} cacheWrite=${u.cache_creation_input_tokens ?? 0}`,
+    );
 
     const toolUse = message.content.find(
       (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',

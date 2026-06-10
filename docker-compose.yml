@@ -3,12 +3,12 @@ version: '3.9'
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: spendsnap_db
+    container_name: spillsnap_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: spendsnap
+      POSTGRES_USER: spillsnap
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: spendsnap
+      POSTGRES_DB: spillsnap
     ports:
       - '5432:5432'
     volumes:
@@ -16,7 +16,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: spendsnap_redis
+    container_name: spillsnap_redis
     restart: unless-stopped
     ports:
       - '6379:6379'

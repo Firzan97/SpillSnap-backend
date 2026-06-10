@@ -3,7 +3,7 @@ import { IsIn, IsOptional } from 'class-validator';
 import type { Platform } from '../settings.config';
 
 /**
- * Optional client platform. Drives platform-specific rows — e.g. the Face ID
+ * Optional client platform. Drives platform-specific rows - e.g. the Face ID
  * toggle is iOS-only, so Android/Web clients must send their platform (or omit
  * it) to correctly have that row hidden.
  */

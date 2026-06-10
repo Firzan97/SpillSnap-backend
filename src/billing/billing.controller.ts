@@ -17,7 +17,7 @@ import {
 } from '@nestjs/swagger';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { BillingService } from './billing.service';
@@ -42,7 +42,7 @@ export class PricingController {
 
 @ApiTags('subscription')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(ClerkAuthGuard)
 @Controller('subscription')
 export class SubscriptionController {
   constructor(

@@ -30,7 +30,7 @@ export class WhatsappSenderService {
     return !!this.token && !!this.phoneNumberId;
   }
 
-  /** Free-form text — only deliverable inside an open 24h customer-service window. */
+  /** Free-form text - only deliverable inside an open 24h customer-service window. */
   async sendText(to: string, body: string): Promise<void> {
     await this.post({
       messaging_product: 'whatsapp',

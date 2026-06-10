@@ -6,7 +6,7 @@ import {
   ApiUnauthorizedResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
@@ -15,7 +15,7 @@ import { LeaderboardService } from './leaderboard.service';
 
 @ApiTags('leaderboard')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(ClerkAuthGuard)
 @Controller('leaderboard')
 export class LeaderboardController {
   constructor(private readonly leaderboardService: LeaderboardService) {}

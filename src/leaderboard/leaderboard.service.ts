@@ -107,7 +107,7 @@ export class LeaderboardService {
     }
 
     // NOTE: scope is accepted now so the API contract is stable, but "friends"
-    // needs a friend graph and "malaysia" needs a country column — neither
+    // needs a friend graph and "malaysia" needs a country column - neither
     // exists yet, so both currently resolve to the global ranking.
 
     const rows = await qb.getRawMany<RawRow>();
@@ -118,16 +118,20 @@ export class LeaderboardService {
       : [];
     const userById = new Map(users.map((u) => [u.id, u]));
 
-    const ranked: RankEntry[] = rows.map((row, i) => {
-      const u = userById.get(row.userId);
-      const name = u?.name ?? 'Unknown';
+    // Drop rows whose user no longer exists (deleted account → orphan receipts).
+    // Otherwise they'd surface as "Unknown" entries on the leaderboard.
+    const liveRows = rows.filter((row) => userById.has(row.userId));
+
+    const ranked: RankEntry[] = liveRows.map((row, i) => {
+      const u = userById.get(row.userId)!;
+      const name = u.name;
       return {
         rank: i + 1,
         userId: row.userId,
         name,
         initials: initials(name),
         avatarColor: avatarColor(row.userId),
-        avatarUrl: u?.avatarUrl ?? null,
+        avatarUrl: u.avatarUrl ?? null,
         receiptCount: Number(row.count),
         weeklyGain: Number(row.weeklyGain),
         isCurrentUser: row.userId === currentUser.id,

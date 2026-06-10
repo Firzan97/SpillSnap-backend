@@ -10,11 +10,11 @@ import { User } from '../../users/entities/user.entity';
 
 export enum ExportFormat {
   CSV = 'csv',
-  PDF = 'pdf', // reserved — not yet generated (Phase 1 ships CSV only)
+  PDF = 'pdf', // reserved - not yet generated (Phase 1 ships CSV only)
 }
 
 /**
- * Metadata for a generated export. The file itself is NOT stored — an export is
+ * Metadata for a generated export. The file itself is NOT stored - an export is
  * fully reproducible from (format, date range, include flags), so re-download
  * regenerates it. This keeps the feature infra-free (no blob storage).
  */
@@ -41,6 +41,14 @@ export class Export {
 
   @Column({ name: 'date_to', type: 'timestamptz', nullable: true })
   dateTo: Date | null;
+
+  // Optional saved-filter selection (from a bookmarked filter preset), kept so a
+  // re-download reproduces exactly the same receipt set.
+  @Column({ type: 'simple-array', nullable: true })
+  categories: string[] | null;
+
+  @Column({ type: 'simple-array', nullable: true })
+  tags: string[] | null;
 
   @Column({ name: 'include_tags_notes', default: true })
   includeTagsNotes: boolean;

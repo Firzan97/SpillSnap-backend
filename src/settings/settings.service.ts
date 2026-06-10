@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createClient } from '@supabase/supabase-js';
+import { createClerkClient, type ClerkClient } from '@clerk/backend';
 import { In, Repository } from 'typeorm';
 import { Receipt } from '../receipts/entities/receipt.entity';
 import { StorageService } from '../receipts/services/storage.service';
@@ -39,8 +39,8 @@ const TAG_TONES: Record<string, string> = {
 @Injectable()
 export class SettingsService {
   private readonly logger = new Logger(SettingsService.name);
-  /** Service-role client for admin auth ops (user deletion). */
-  private readonly supabaseAdmin: ReturnType<typeof createClient>;
+  /** Backend client for admin auth ops (user deletion). */
+  private readonly clerk: ClerkClient;
 
   constructor(
     @InjectRepository(Receipt)
@@ -52,11 +52,9 @@ export class SettingsService {
     private readonly config: ConfigService,
     private readonly receiptsService: ReceiptsService,
   ) {
-    this.supabaseAdmin = createClient(
-      this.config.getOrThrow('SUPABASE_URL'),
-      this.config.getOrThrow('SUPABASE_SERVICE_ROLE_KEY'),
-      { auth: { persistSession: false } },
-    );
+    this.clerk = createClerkClient({
+      secretKey: this.config.getOrThrow('CLERK_SECRET_KEY'),
+    });
   }
 
   /** Normalize a tag to a single leading '#', spaces → hyphens. */
@@ -147,8 +145,8 @@ export class SettingsService {
 
   /**
    * Permanently delete the user. Removes stored receipt images, then the local
-   * profile row (receipts cascade via FK), then the Supabase Auth user so they
-   * can't sign back in.
+   * profile row (receipts cascade via FK), then the Clerk user so they can't
+   * sign back in.
    */
   async deleteAccount(user: User): Promise<void> {
     const receipts = await this.receiptRepo.find({
@@ -162,14 +160,15 @@ export class SettingsService {
 
     await this.usersService.delete(user.id);
 
-    if (user.supabaseId) {
-      const { error } = await this.supabaseAdmin.auth.admin.deleteUser(
-        user.supabaseId,
-      );
-      if (error) {
+    if (user.clerkId) {
+      try {
+        await this.clerk.users.deleteUser(user.clerkId);
+      } catch (error) {
         // Local row is already gone; log so the orphaned auth user can be reaped.
         this.logger.error(
-          `Supabase auth delete failed for ${user.supabaseId}: ${error.message}`,
+          `Clerk user delete failed for ${user.clerkId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
         );
       }
     }

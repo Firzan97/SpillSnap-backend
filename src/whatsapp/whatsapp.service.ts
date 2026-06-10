@@ -210,7 +210,7 @@ export class WhatsappService {
       const r = result.receipt;
       await this.sender.sendText(
         from,
-        `✅ Saved! *${r.merchant}* — ${r.currency} ${Number(r.amount).toFixed(2)}\nView it in the SpillSnap app.`,
+        `✅ Saved! *${r.merchant}* - ${r.currency} ${Number(r.amount).toFixed(2)}\nView it in the SpillSnap app.`,
       );
     } catch (e) {
       this.logger.error(

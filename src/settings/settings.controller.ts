@@ -23,7 +23,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { MergeTagsDto } from './dto/merge-tags.dto';
@@ -39,7 +39,7 @@ const AVATAR_MIME = /^image\/(jpeg|jpg|png|webp|heic)$/;
 
 @ApiTags('settings')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(ClerkAuthGuard)
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settings: SettingsService) {}
@@ -69,7 +69,7 @@ export class SettingsController {
   @ApiOperation({
     summary: 'Account & security details',
     description:
-      'Identity fields plus a server-driven `sections` config. Face ID is iOS-only — pass ?platform=ios to receive it.',
+      'Identity fields plus a server-driven `sections` config. Face ID is iOS-only - pass ?platform=ios to receive it.',
   })
   @ApiResponse({ status: 200, description: 'Account detail + screen config' })
   account(@CurrentUser() user: User, @Query() query: PlatformQueryDto) {
@@ -141,12 +141,12 @@ export class SettingsController {
   @ApiOperation({
     summary: 'Delete account',
     description:
-      'Permanently deletes the user: removes stored receipt images, the local profile (receipts cascade), and the Supabase Auth user. Irreversible.',
+      'Permanently deletes the user: removes stored receipt images, the local profile (receipts cascade), and the Clerk user. Irreversible.',
   })
   @ApiResponse({ status: 204, description: 'Account deleted' })
   @ApiResponse({
     status: 401,
-    description: 'Missing or invalid Supabase token',
+    description: 'Missing or invalid Clerk token',
   })
   deleteAccount(@CurrentUser() user: User) {
     return this.settings.deleteAccount(user);

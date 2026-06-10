@@ -9,7 +9,7 @@ import { BillingInterval } from './entities/subscription.entity';
 
 /**
  * Thin wrapper around the Stripe SDK. Keeping every Stripe call behind this
- * service means the rest of the app stays provider-agnostic — a future Chip /
+ * service means the rest of the app stays provider-agnostic - a future Chip /
  * Lemon Squeezy adapter would implement the same surface.
  */
 @Injectable()
@@ -102,7 +102,7 @@ export class StripeService {
     return session.url;
   }
 
-  /** Hosted Customer Portal — lets the user cancel / update card themselves. */
+  /** Hosted Customer Portal - lets the user cancel / update card themselves. */
   async createPortalSession(
     customerId: string,
     returnUrl: string,

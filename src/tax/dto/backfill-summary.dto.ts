@@ -19,7 +19,7 @@ export class BackfillSummaryDto {
   @ApiProperty({
     example: 5,
     description:
-      'AI suggested a relief but was unsure — left untagged for the user to confirm',
+      'AI suggested a relief but was unsure - left untagged for the user to confirm',
   })
   needsReview: number;
 

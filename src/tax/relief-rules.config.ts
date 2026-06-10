@@ -9,7 +9,7 @@ import {
  * Core principle: receipts store FACTS (category, amount, date). This file
  * holds POLICY (which reliefs exist, and their caps) for each YA. Relief is
  * computed at read-time by matching a receipt's YA (from its date) to the rules
- * here — so when LHDN changes a cap or drops/adds a category, we edit only this
+ * here - so when LHDN changes a cap or drops/adds a category, we edit only this
  * file and the whole history recomputes. No receipt data ever migrates.
  *
  * Each October, when the Budget is tabled, add the next YA entry as 'confirmed'.
@@ -20,7 +20,7 @@ import {
  * category, but some are shared: LHDN claims books/journals WITHIN the RM2,500
  * Lifestyle cap, so the lifestyle bucket lists both LIFESTYLE and BOOKS as
  * members. Spending across all members of a bucket is summed against the one
- * `cap` — so books + computers can't together exceed RM2,500.
+ * `cap` - so books + computers can't together exceed RM2,500.
  */
 export interface ReliefBucket {
   /** Stable bucket id (used as the grouping key in the summary API). */
@@ -47,7 +47,7 @@ export interface YaRules {
 }
 
 // Figures sourced from hasil.gov.my (Individual → Tax Reliefs), YA2025. Re-verify
-// each year against the official page when that YA's Budget is confirmed —
+// each year against the official page when that YA's Budget is confirmed -
 // caps and categories change annually. Only receipt-claimable reliefs are
 // modelled here (status-based reliefs like the RM9,000 personal relief, EPF,
 // PRS and housing-loan interest aren't driven by receipts, so they're out of
@@ -74,7 +74,7 @@ export const RELIEF_RULES: Record<number, YaRules> = {
         members: [LhdnRelief.SPORTS],
       },
       // Restricted RM10,000; has internal sub-limits (vaccination/dental/full
-      // exam capped at RM1,000 each within this total — not modelled yet).
+      // exam capped at RM1,000 each within this total - not modelled yet).
       {
         key: 'medical',
         cap: 10000,
@@ -149,7 +149,7 @@ export function rulesForYa(ya: number): YaRules {
 
 /**
  * Which bucket a receipt's relief tag draws from. Returns undefined for NONE or
- * any tag not claimable in this YA (e.g. a category LHDN dropped) — the caller
+ * any tag not claimable in this YA (e.g. a category LHDN dropped) - the caller
  * treats that as "not claimable", keeping the receipt but counting RM0.
  */
 export function bucketForRelief(

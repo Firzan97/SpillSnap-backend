@@ -126,7 +126,7 @@ export class DashboardService {
     );
     const [mostVisitedMerchant, mostVisitedCount] = Object.entries(
       merchantVisits,
-    ).sort(([, a], [, b]) => b - a)[0] ?? ['—', 0];
+    ).sort(([, a], [, b]) => b - a)[0] ?? ['-', 0];
 
     const dayTotals = currentMonthReceipts.reduce<Record<number, number[]>>(
       (acc, r) => {

@@ -20,14 +20,14 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { BroadcastDto } from './dto/broadcast.dto';
 import { NotificationsService } from './notifications.service';
 import { NotificationsScheduler } from './notifications.scheduler';
 
 @ApiTags('notifications')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(ClerkAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(
@@ -85,7 +85,7 @@ export class NotificationsController {
     return this.notifications.markRead(user, id);
   }
 
-  // POST /notifications/broadcast — admin only: push a product update to everyone.
+  // POST /notifications/broadcast - admin only: push a product update to everyone.
   @Post('broadcast')
   @ApiOperation({
     summary: 'Broadcast a product update to all opted-in users (admin only)',

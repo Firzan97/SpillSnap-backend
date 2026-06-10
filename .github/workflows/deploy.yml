@@ -37,12 +37,12 @@ jobs:
           port: ${{ secrets.VPS_PORT }} # optional; defaults to 22 if unset
           script_stop: true # abort on first failed command
           script: |
-            cd /opt/spendsnap-backend
+            cd /opt/spillsnap-backend
             # Run fresh each deploy (not from the repo's possibly-stale deploy.sh):
             # clear the "dubious ownership" block for whichever user the CI logs in as.
-            git config --global --add safe.directory /opt/spendsnap-backend || true
+            git config --global --add safe.directory /opt/spillsnap-backend || true
             # Trust github.com's host key, and pull with the repo's deploy key by
             # absolute path (works regardless of which user/HOME the CI logs in as).
             # deploy.sh inherits GIT_SSH_COMMAND.
-            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /opt/spendsnap-backend/.ssh/id_ed25519"
+            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /opt/spillsnap-backend/.ssh/id_ed25519"
             ./deploy/deploy.sh

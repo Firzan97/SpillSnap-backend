@@ -1,5 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsISO8601, IsOptional } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsArray, IsISO8601, IsOptional, IsString } from 'class-validator';
+
+/** Accept either a repeated query param or a comma-separated string; drop empties. */
+const toArray = ({ value }: { value: unknown }): string[] | undefined => {
+  if (value === undefined || value === null) return undefined;
+  const arr = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : [];
+  const cleaned = arr.map((v) => String(v).trim()).filter(Boolean);
+  return cleaned.length ? cleaned : undefined;
+};
 
 export class ExportSummaryQueryDto {
   @ApiPropertyOptional({
@@ -15,4 +28,24 @@ export class ExportSummaryQueryDto {
   @IsOptional()
   @IsISO8601()
   dateTo?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Only count these receipt categories (from a saved filter).',
+  })
+  @IsOptional()
+  @Transform(toArray)
+  @IsArray()
+  @IsString({ each: true })
+  categories?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Only count receipts carrying any of these tags.',
+  })
+  @IsOptional()
+  @Transform(toArray)
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

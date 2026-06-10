@@ -24,7 +24,7 @@ export class ReliefBucketSummaryDto {
 
   @ApiProperty({
     example: 1840.5,
-    description: 'Claimable = min(spent, cap) — what actually counts as relief',
+    description: 'Claimable = min(spent, cap) - what actually counts as relief',
   })
   claimable: number;
 

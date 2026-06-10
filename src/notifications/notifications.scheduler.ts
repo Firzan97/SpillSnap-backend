@@ -12,9 +12,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // A small rotating pool of tips, indexed by ISO week so everyone sees the same
 // one and it changes weekly.
 const TIPS = [
-  'Snap receipts the moment you pay — it only takes a second and keeps your streak alive.',
+  'Snap receipts the moment you pay - it only takes a second and keeps your streak alive.',
   'Tag receipts with #tax as you go to make e-Filing season effortless.',
-  'Pro unlocks WhatsApp receipt upload — forward a photo and we file it for you.',
+  'Pro unlocks WhatsApp receipt upload - forward a photo and we file it for you.',
   'Reviewing categories weekly keeps your spending insights sharp.',
 ];
 
@@ -54,14 +54,14 @@ export class NotificationsScheduler {
     return this.users.find({ where: { id: In(ids) } });
   }
 
-  // ── Daily snap reminder — 20:00 every day ────────────────────────────────────
+  // ── Daily snap reminder - 20:00 every day ────────────────────────────────────
   @Cron('0 20 * * *', { name: 'daily-snap-reminder' })
   async dailySnapReminder(): Promise<void> {
     const users = await this.usersWithDevices();
     let sent = 0;
     for (const user of users) {
       if (this.snappedToday(user)) continue;
-      // Skip brand-new users who have never snapped — nothing to remind about.
+      // Skip brand-new users who have never snapped - nothing to remind about.
       if (!user.lastSnapAt) continue;
       await this.notifications.notify(user.id, {
         type: 'receipt',
@@ -75,7 +75,7 @@ export class NotificationsScheduler {
     this.logger.log(`daily-snap-reminder: ${sent} sent`);
   }
 
-  // ── Streak at risk — 21:00 every day ─────────────────────────────────────────
+  // ── Streak at risk - 21:00 every day ─────────────────────────────────────────
   @Cron('0 21 * * *', { name: 'streak-at-risk' })
   async streakAtRisk(): Promise<void> {
     const users = await this.users.find({
@@ -98,7 +98,7 @@ export class NotificationsScheduler {
     this.logger.log(`streak-at-risk: ${sent} sent`);
   }
 
-  // ── Weekly summary — Sundays 18:00 ───────────────────────────────────────────
+  // ── Weekly summary - Sundays 18:00 ───────────────────────────────────────────
   @Cron('0 18 * * 0', { name: 'weekly-summary' })
   async weeklySummary(): Promise<void> {
     const users = await this.usersWithDevices();
@@ -117,7 +117,7 @@ export class NotificationsScheduler {
         body:
           count > 0
             ? `You logged ${count} receipt${count === 1 ? '' : 's'} this week. Open SpillSnap for the full recap.`
-            : 'No receipts logged this week — snap one to get back on track.',
+            : 'No receipts logged this week - snap one to get back on track.',
         data: { count },
         prefKey: 'weekly',
       });
@@ -126,7 +126,7 @@ export class NotificationsScheduler {
     this.logger.log(`weekly-summary: ${sent} sent`);
   }
 
-  // ── Tips & offers — Mondays 10:00 ────────────────────────────────────────────
+  // ── Tips & offers - Mondays 10:00 ────────────────────────────────────────────
   @Cron('0 10 * * 1', { name: 'tips-and-offers' })
   async tipsAndOffers(): Promise<void> {
     const users = await this.usersWithDevices();
@@ -146,7 +146,7 @@ export class NotificationsScheduler {
     this.logger.log(`tips-and-offers: ${sent} sent`);
   }
 
-  // ── Product updates — manual broadcast (called from a release hook/admin) ─────
+  // ── Product updates - manual broadcast (called from a release hook/admin) ─────
   /** Broadcast a product update to every user who has the toggle on. */
   async broadcastProductUpdate(title: string, body: string): Promise<number> {
     const users = await this.usersWithDevices();

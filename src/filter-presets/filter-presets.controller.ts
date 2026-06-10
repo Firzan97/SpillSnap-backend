@@ -16,7 +16,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { CreateFilterPresetDto } from './dto/create-filter-preset.dto';
@@ -25,7 +25,7 @@ import { FilterPresetsService } from './filter-presets.service';
 
 @ApiTags('filter-presets')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(ClerkAuthGuard)
 @Controller('filter-presets')
 export class FilterPresetsController {
   constructor(private readonly presets: FilterPresetsService) {}

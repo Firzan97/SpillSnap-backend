@@ -48,7 +48,7 @@ function publicHandle(name: string): string {
 export class PublicStatsService {
   private readonly logger = new Logger(PublicStatsService.name);
 
-  // Marketing counters are vanity aggregates over the whole table — heavy and
+  // Marketing counters are vanity aggregates over the whole table - heavy and
   // not time-sensitive (the UI says "updated every hour"). Cache one shared
   // snapshot in memory so N visitors cost 1 query/hour, not N queries/load.
   private cache: PublicStatsResponseDto | null = null;
@@ -81,7 +81,7 @@ export class PublicStatsService {
         return stats;
       })
       .catch((err) => {
-        // On failure serve the stale snapshot if we have one — a marketing
+        // On failure serve the stale snapshot if we have one - a marketing
         // counter going slightly stale beats a 500 on the landing page.
         this.logger.error('Failed to compute public stats', err as Error);
         if (this.cache) return this.cache;
@@ -158,7 +158,7 @@ export class PublicStatsService {
     };
   }
 
-  // SST captured on tax-eligible confirmed receipts — our public "tax savings"
+  // SST captured on tax-eligible confirmed receipts - our public "tax savings"
   // proxy. Optional `since` scopes it to compute the period delta.
   private async sumSst(since?: Date): Promise<number> {
     const qb = this.receiptRepo
@@ -174,11 +174,17 @@ export class PublicStatsService {
   private async topSnappers(monthStart: Date) {
     const rows = await this.receiptRepo
       .createQueryBuilder('r')
+      // INNER JOIN users so receipts orphaned by a deleted account drop out of
+      // the board. The user FK is declared onDelete:CASCADE, but the live schema
+      // may predate that (synchronize won't alter an existing constraint), so a
+      // hard-deleted user can leave receipts behind that would otherwise rank as
+      // "Anonymous". Joining the users table excludes them either way.
+      .innerJoin('users', 'u', 'u.id = r.user_id')
       .select('r.user_id', 'userId')
       .addSelect('COUNT(*)', 'count')
       .where('r.status = :status', { status: ReceiptStatus.CONFIRMED })
       // Rank by when receipts were *snapped* (uploaded) this month, not the date
-      // printed on the receipt — "top snappers this month" = activity this month.
+      // printed on the receipt - "top snappers this month" = activity this month.
       .andWhere('r.created_at >= :monthStart', { monthStart })
       .groupBy('r.user_id')
       .orderBy('count', 'DESC')

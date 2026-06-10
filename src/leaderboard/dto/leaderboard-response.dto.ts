@@ -75,7 +75,7 @@ export class LeaderboardResponseDto {
 
   @ApiProperty({
     type: [LeaderboardEntryDto],
-    description: 'Top 3 — for the podium',
+    description: 'Top 3 - for the podium',
   })
   podium: LeaderboardEntryDto[];
 

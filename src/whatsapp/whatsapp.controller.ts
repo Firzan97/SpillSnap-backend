@@ -21,14 +21,14 @@ import { WhatsappService } from './whatsapp.service';
  *  - GET  verifies the subscription with hub.verify_token
  *  - POST receives inbound messages; body is HMAC-signed with the app secret
  *
- * Excluded from Swagger — it's an external integration endpoint.
+ * Excluded from Swagger - it's an external integration endpoint.
  */
 @ApiExcludeController()
 @Controller('whatsapp')
 export class WhatsappController {
   constructor(private readonly whatsapp: WhatsappService) {}
 
-  // GET /api/v1/whatsapp/webhook — Meta verification handshake
+  // GET /api/v1/whatsapp/webhook - Meta verification handshake
   @Get('webhook')
   @Header('Content-Type', 'text/plain')
   verify(
@@ -41,7 +41,7 @@ export class WhatsappController {
     return result;
   }
 
-  // POST /api/v1/whatsapp/webhook — inbound messages
+  // POST /api/v1/whatsapp/webhook - inbound messages
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   receive(

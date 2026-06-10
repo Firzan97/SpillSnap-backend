@@ -50,10 +50,10 @@ export class User {
   @Column()
   name: string;
 
-  // Supabase Auth (auth.users) is the source of truth for credentials.
-  // This maps the Supabase user id ("sub" claim) to our local profile row.
-  @Column({ name: 'supabase_id', type: 'uuid', unique: true, nullable: true })
-  supabaseId: string | null;
+  // Clerk is the source of truth for credentials. This maps the Clerk user id
+  // ("sub" claim, e.g. user_2abc…) to our local profile row.
+  @Column({ name: 'clerk_id', type: 'varchar', unique: true, nullable: true })
+  clerkId: string | null;
 
   @Column({
     name: 'auth_provider',

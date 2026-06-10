@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time VPS provisioning for the SpendSnap backend.
+# One-time VPS provisioning for the SpillSnap backend.
 # Run ONCE on a fresh server as root:  sudo bash deploy/provision.sh
 # (or pipe it in before the repo exists — see DEPLOY.md).
 #
@@ -10,9 +10,9 @@
 # deploy/deploy.sh (git pull -> build -> pm2 reload), which the GitHub Action runs.
 set -euo pipefail
 
-APP_USER=spendsnap
-APP_DIR=/opt/spendsnap-backend
-REPO_URL=git@github.com:Firzan97/SpendSnap-backend.git
+APP_USER=spillsnap
+APP_DIR=/opt/spillsnap-backend
+REPO_URL=git@github.com:Firzan97/SpillSnap-backend.git
 NODE_MAJOR=20
 
 if [[ $EUID -ne 0 ]]; then
@@ -92,4 +92,4 @@ sudo -u "${APP_USER}" pm2 save
 
 echo
 echo "✓ Provisioned. App under PM2. Routine deploys now via deploy/deploy.sh (CI)."
-echo "  Logs: sudo -u ${APP_USER} pm2 logs spendsnap-api"
+echo "  Logs: sudo -u ${APP_USER} pm2 logs spillsnap-api"

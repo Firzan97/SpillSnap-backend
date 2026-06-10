@@ -1,23 +1,23 @@
-# SpendSnap — Deploy Guide
+# SpillSnap — Deploy Guide
 
 Architecture:
 
 ```
-Landing (Nuxt)  →  Cloudflare Pages      (free, global CDN)   spendsnap.my
-Backend (Nest)  →  Exabytes NVMe C2 VPS  (Caddy + systemd)    api.spendsnap.my
+Landing (Nuxt)  →  Cloudflare Pages      (free, global CDN)   spillsnap.my
+Backend (Nest)  →  Exabytes NVMe C2 VPS  (Caddy + systemd)    api.spillsnap.my
 DB/Auth/Storage →  Supabase              (already)
 ```
 
 Swap the example domains/paths below for your own. Assumed domains:
-- `spendsnap.my` (+ `www`) → landing
-- `api.spendsnap.my` → backend
-- `app.spendsnap.my` → the product app (separate; not covered here)
+- `spillsnap.my` (+ `www`) → landing
+- `api.spillsnap.my` → backend
+- `app.spillsnap.my` → the product app (separate; not covered here)
 
 ---
 
 ## Part 0 — DNS (do this first, on Cloudflare)
 
-1. Add `spendsnap.my` to a **free Cloudflare account** and point your registrar's
+1. Add `spillsnap.my` to a **free Cloudflare account** and point your registrar's
    nameservers at the two Cloudflare gives you.
 2. Records:
    | Type | Name | Value | Proxy |
@@ -47,21 +47,21 @@ ufw allow 80
 ufw allow 443
 ufw --force enable
 # A non-root user to run the app
-adduser --system --group --home /opt/spendsnap-backend spendsnap
+adduser --system --group --home /opt/spillsnap-backend spillsnap
 ```
 
 ### 1.2 Get the code
 ```bash
 cd /opt
-git clone <YOUR_BACKEND_REPO_URL> spendsnap-backend
-chown -R spendsnap:spendsnap /opt/spendsnap-backend
-cd spendsnap-backend
+git clone <YOUR_BACKEND_REPO_URL> spillsnap-backend
+chown -R spillsnap:spillsnap /opt/spillsnap-backend
+cd spillsnap-backend
 npm ci
 npm run build      # outputs dist/main.js
 ```
 
 ### 1.3 Production env file
-Create `/opt/spendsnap-backend/.env` (chmod 600). **Set NODE_ENV=production** so
+Create `/opt/spillsnap-backend/.env` (chmod 600). **Set NODE_ENV=production** so
 TypeORM does NOT auto-synchronize the schema.
 ```bash
 NODE_ENV=production
@@ -83,14 +83,14 @@ STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # CORS — comma-separated; must include every web origin that calls the API
-FRONTEND_URL=https://spendsnap.my,https://www.spendsnap.my,https://app.spendsnap.my
+FRONTEND_URL=https://spillsnap.my,https://www.spillsnap.my,https://app.spillsnap.my
 
 APP_VERSION=1.0.0
 PUBLIC_STATS_TTL_MS=3600000
 ```
 ```bash
-chmod 600 /opt/spendsnap-backend/.env
-chown spendsnap:spendsnap /opt/spendsnap-backend/.env
+chmod 600 /opt/spillsnap-backend/.env
+chown spillsnap:spillsnap /opt/spillsnap-backend/.env
 ```
 
 > Schema note: you've been running dev with `synchronize:true` against this same
@@ -100,11 +100,11 @@ chown spendsnap:spendsnap /opt/spendsnap-backend/.env
 
 ### 1.4 Run it as a service
 ```bash
-cp deploy/spendsnap-api.service /etc/systemd/system/
+cp deploy/spillsnap-api.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now spendsnap-api
-systemctl status spendsnap-api --no-pager      # should be active (running)
-journalctl -u spendsnap-api -f                 # live logs
+systemctl enable --now spillsnap-api
+systemctl status spillsnap-api --no-pager      # should be active (running)
+journalctl -u spillsnap-api -f                 # live logs
 ```
 The app now listens on `127.0.0.1:3000` (not public yet).
 
@@ -116,19 +116,19 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /
 apt update && apt install -y caddy
 
 mkdir -p /var/log/caddy
-cp /opt/spendsnap-backend/deploy/Caddyfile /etc/caddy/Caddyfile
-# edit the domain inside if not api.spendsnap.my
+cp /opt/spillsnap-backend/deploy/Caddyfile /etc/caddy/Caddyfile
+# edit the domain inside if not api.spillsnap.my
 systemctl reload caddy
 ```
-Caddy auto-fetches a Let's Encrypt cert for `api.spendsnap.my` (needs the DNS A
+Caddy auto-fetches a Let's Encrypt cert for `api.spillsnap.my` (needs the DNS A
 record from Part 0 + ports 80/443 open). Verify:
 ```bash
-curl https://api.spendsnap.my/api/v1/public/stats
+curl https://api.spillsnap.my/api/v1/public/stats
 ```
 
 ### 1.6 Redeploys later
 ```bash
-cd /opt/spendsnap-backend && ./deploy/deploy.sh
+cd /opt/spillsnap-backend && ./deploy/deploy.sh
 ```
 
 ---
@@ -136,15 +136,15 @@ cd /opt/spendsnap-backend && ./deploy/deploy.sh
 ## Part 2 — Landing on Cloudflare Pages
 
 1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git** →
-   pick the `spendsnap-web` repo.
+   pick the `spillsnap-web` repo.
 2. Build settings (framework preset **Nuxt**):
    - Build command: `npm run build`
    - Build output directory: `dist`
    - (Cloudflare auto-applies the `cloudflare-pages` Nitro preset.)
 3. **Environment variables** (Production) — these feed `nuxt.config.ts` runtimeConfig:
    ```
-   NUXT_PUBLIC_API_BASE=https://api.spendsnap.my
-   NUXT_PUBLIC_APP_URL=https://app.spendsnap.my
+   NUXT_PUBLIC_API_BASE=https://api.spillsnap.my
+   NUXT_PUBLIC_APP_URL=https://app.spillsnap.my
    NUXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
    NUXT_PUBLIC_SUPABASE_ANON_KEY=...
    NUXT_PUBLIC_APP_STORE_URL=...        # optional
@@ -152,18 +152,18 @@ cd /opt/spendsnap-backend && ./deploy/deploy.sh
    ```
    > `apiBase` is the ROOT only — the web code appends `/api/v1` itself. Do NOT
    > include `/api/v1` here.
-4. Deploy. Then **Custom domains** → add `spendsnap.my` and `www.spendsnap.my`
+4. Deploy. Then **Custom domains** → add `spillsnap.my` and `www.spillsnap.my`
    (Cloudflare wires the DNS for you since the zone is on Cloudflare).
 
 ---
 
 ## Part 3 — Verify end-to-end
-- `https://api.spendsnap.my/api/v1/public/stats` returns JSON (backend + TLS OK).
-- `https://spendsnap.my` loads, and the stats band / testimonials populate
+- `https://api.spillsnap.my/api/v1/public/stats` returns JSON (backend + TLS OK).
+- `https://spillsnap.my` loads, and the stats band / testimonials populate
   (landing → backend CORS OK). If they're empty with a CORS error in the browser
-  console, fix `FRONTEND_URL` on the VPS and `systemctl restart spendsnap-api`.
+  console, fix `FRONTEND_URL` on the VPS and `systemctl restart spillsnap-api`.
 - Swagger `/docs` is intentionally **off** in production (`NODE_ENV=production`).
-- Stripe: point the live webhook at `https://api.spendsnap.my/api/v1/webhooks/stripe`
+- Stripe: point the live webhook at `https://api.spillsnap.my/api/v1/webhooks/stripe`
   and confirm `STRIPE_WEBHOOK_SECRET` matches.
 
 ## Notes

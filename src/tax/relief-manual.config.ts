@@ -2,7 +2,7 @@
  * MANUAL (non-receipt) reliefs, versioned per Year of Assessment.
  *
  * SpillSnap derives most reliefs from snapped receipts (see relief-rules.config).
- * But several LHDN reliefs can never come from a receipt — they're read off an
+ * But several LHDN reliefs can never come from a receipt - they're read off an
  * annual statement (EPF, insurance, SSPN, housing-loan interest) or depend on
  * the taxpayer's status/dependents (disability, spouse, children). Those are
  * collected here as OPTIONAL user input on the Tax relief screen and folded into
@@ -34,7 +34,7 @@ export interface ManualReliefField {
 }
 
 // Sourced from hasil.gov.my (Individual → Tax Reliefs), YA2025. Re-verify each
-// year when the Budget is confirmed — caps and categories change annually.
+// year when the Budget is confirmed - caps and categories change annually.
 const YA2025_FIELDS: ManualReliefField[] = [
   // ── Group: figures from your annual statements ──────────────────────────────
   {

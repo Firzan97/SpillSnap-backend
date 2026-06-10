@@ -26,7 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { DailyQuotaGuard } from '../billing/guards/daily-quota.guard';
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
@@ -39,7 +39,7 @@ const ALLOWED_IMAGE = /^image\/(jpeg|jpg|png|webp|heic)$/;
 
 @ApiTags('receipts')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(ClerkAuthGuard)
 @Controller('receipts')
 export class ReceiptsController {
   constructor(private readonly receiptsService: ReceiptsService) {}
@@ -68,22 +68,22 @@ export class ReceiptsController {
     summary:
       'Capture: upload receipt photo(s), extract fields, return an unsaved draft',
     description:
-      'Stores the image(s) and runs OCR/vision extraction. Pass multiple images for a long receipt photographed in sections — they are merged into one receipt. Returns the extracted draft plus an imagePath to echo back when saving. Does NOT persist a receipt.',
+      'Stores the image(s) and runs OCR/vision extraction. Pass multiple images for a long receipt photographed in sections - they are merged into one receipt. Returns the extracted draft plus an imagePath to echo back when saving. Does NOT persist a receipt.',
   })
   @ApiResponse({ status: 200, description: 'Extracted draft' })
   @ApiResponse({ status: 400, description: 'Missing or invalid image file(s)' })
   @ApiResponse({
     status: 401,
-    description: 'Missing or invalid Supabase token',
+    description: 'Missing or invalid Clerk token',
   })
   @ApiResponse({
     status: 402,
-    description: 'Free daily upload limit reached — upgrade to Pro',
+    description: 'Free daily upload limit reached - upgrade to Pro',
   })
   @ApiResponse({
     status: 422,
     description:
-      'Image is not a receipt — { error: "NOT_A_RECEIPT", message } telling the user to capture a valid receipt',
+      'Image is not a receipt - { error: "NOT_A_RECEIPT", message } telling the user to capture a valid receipt',
   })
   capture(
     @CurrentUser() user: User,
@@ -115,7 +115,7 @@ export class ReceiptsController {
   @ApiResponse({ status: 200, description: 'Streak summary' })
   @ApiResponse({
     status: 401,
-    description: 'Missing or invalid Supabase token',
+    description: 'Missing or invalid Clerk token',
   })
   streak(@CurrentUser() user: User) {
     return this.receiptsService.streak(user);
@@ -133,7 +133,7 @@ export class ReceiptsController {
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({
     status: 401,
-    description: 'Missing or invalid Supabase token',
+    description: 'Missing or invalid Clerk token',
   })
   create(@CurrentUser() user: User, @Body() dto: CreateReceiptDto) {
     return this.receiptsService.create(user, dto);
@@ -149,7 +149,7 @@ export class ReceiptsController {
   @ApiResponse({ status: 200, description: 'Paginated receipts' })
   @ApiResponse({
     status: 401,
-    description: 'Missing or invalid Supabase token',
+    description: 'Missing or invalid Clerk token',
   })
   list(@CurrentUser() user: User, @Query() query: ListReceiptsQueryDto) {
     return this.receiptsService.list(user, query);
@@ -161,7 +161,7 @@ export class ReceiptsController {
   @ApiResponse({ status: 200, description: 'Receipt detail' })
   @ApiResponse({
     status: 401,
-    description: 'Missing or invalid Supabase token',
+    description: 'Missing or invalid Clerk token',
   })
   @ApiResponse({ status: 404, description: 'Receipt not found' })
   findOne(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
@@ -177,7 +177,7 @@ export class ReceiptsController {
   @ApiResponse({ status: 200, description: 'Updated receipt' })
   @ApiResponse({
     status: 401,
-    description: 'Missing or invalid Supabase token',
+    description: 'Missing or invalid Clerk token',
   })
   @ApiResponse({ status: 404, description: 'Receipt not found' })
   update(
@@ -195,7 +195,7 @@ export class ReceiptsController {
   @ApiResponse({ status: 204, description: 'Deleted' })
   @ApiResponse({
     status: 401,
-    description: 'Missing or invalid Supabase token',
+    description: 'Missing or invalid Clerk token',
   })
   @ApiResponse({ status: 404, description: 'Receipt not found' })
   remove(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
