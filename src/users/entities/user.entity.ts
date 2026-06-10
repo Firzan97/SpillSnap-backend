@@ -19,7 +19,7 @@ export enum AuthProvider {
 
 /** Notification preferences (settings → Notifications). */
 export interface NotificationPrefs {
-  channels: { push: boolean; email: boolean };
+  channels: { push: boolean };
   prefs: Record<string, boolean>; // keyed by pref id, e.g. snap, streak, weekly…
   quietHours: { enabled: boolean; from: string; to: string };
 }

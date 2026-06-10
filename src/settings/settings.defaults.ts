@@ -72,7 +72,7 @@ export function defaultNotificationPrefs(): NotificationPrefs {
   for (const g of NOTIFICATION_GROUPS)
     for (const r of g.rows) prefs[r.key] = r.default;
   return {
-    channels: { push: true, email: true },
+    channels: { push: true },
     prefs,
     quietHours: { enabled: true, from: '10:00 PM', to: '7:00 AM' },
   };

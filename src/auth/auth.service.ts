@@ -73,7 +73,14 @@ export class AuthService {
       email.split('@')[0] ||
       'SpillSnap User';
     const avatarUrl = clerkUser.imageUrl || null;
-    const phone = clerkUser.primaryPhoneNumber?.phoneNumber ?? null;
+    // Prefer a verified Clerk phone identifier, but fall back to the plain
+    // number the web sign-up stashes in unsafeMetadata.phone (optional field, no
+    // SMS/OTP - mirrors the mobile app, which stores phone unverified too).
+    const phone =
+      clerkUser.primaryPhoneNumber?.phoneNumber ??
+      (typeof clerkUser.unsafeMetadata?.phone === 'string'
+        ? clerkUser.unsafeMetadata.phone
+        : null);
     const authProvider = this.mapProvider(clerkUser);
 
     // A row may already exist under the same email - e.g. migrated from the old
