@@ -28,7 +28,7 @@ export class LeaderboardQueryDto {
     enum: LeaderboardScope,
     default: LeaderboardScope.GLOBAL,
     description:
-      'Audience to rank against. "friends" and "malaysia" fall back to global until a friend graph / country column exists.',
+      'Audience to rank against. "malaysia" ranks MY-based users; "friends" falls back to global until a friend graph exists.',
   })
   @IsOptional()
   @IsEnum(LeaderboardScope)

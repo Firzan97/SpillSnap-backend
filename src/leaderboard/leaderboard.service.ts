@@ -6,6 +6,7 @@ import { User } from '../users/entities/user.entity';
 import {
   LeaderboardPeriod,
   LeaderboardQueryDto,
+  LeaderboardScope,
 } from './dto/leaderboard-query.dto';
 
 // Podium / avatar palette mirrors the "SpillSnap Directions" leaderboard design.
@@ -106,9 +107,8 @@ export class LeaderboardService {
       qb.andWhere('r.created_at >= :start', { start });
     }
 
-    // NOTE: scope is accepted now so the API contract is stable, but "friends"
-    // needs a friend graph and "malaysia" needs a country column - neither
-    // exists yet, so both currently resolve to the global ranking.
+    // NOTE: "malaysia" filters by users.country below. "friends" still needs a
+    // friend graph (none yet) so it resolves to the global ranking.
 
     const rows = await qb.getRawMany<RawRow>();
 
@@ -120,7 +120,15 @@ export class LeaderboardService {
 
     // Drop rows whose user no longer exists (deleted account → orphan receipts).
     // Otherwise they'd surface as "Unknown" entries on the leaderboard.
-    const liveRows = rows.filter((row) => userById.has(row.userId));
+    // "malaysia" scope additionally restricts to MY-based users.
+    const liveRows = rows.filter((row) => {
+      const u = userById.get(row.userId);
+      if (!u) return false;
+      if (scope === LeaderboardScope.MALAYSIA && u.country !== 'MY') {
+        return false;
+      }
+      return true;
+    });
 
     const ranked: RankEntry[] = liveRows.map((row, i) => {
       const u = userById.get(row.userId)!;

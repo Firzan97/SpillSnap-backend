@@ -73,6 +73,11 @@ export class User {
   @Column({ name: 'base_currency', length: 3, default: 'MYR' })
   baseCurrency: string;
 
+  // Country (ISO 3166-1 alpha-2). Drives the "Malaysia" leaderboard scope.
+  // Defaults to MY — the app is Malaysia-first.
+  @Column({ length: 2, default: 'MY' })
+  country: string;
+
   @Column({ type: 'enum', enum: UserRole, default: UserRole.FREE })
   role: UserRole;
 
