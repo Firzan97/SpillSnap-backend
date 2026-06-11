@@ -9,8 +9,8 @@ After=network.target
 [Service]
 Type=simple
 User=spendsnap
-WorkingDirectory=/opt/spendsnap-backend
-EnvironmentFile=/opt/spendsnap-backend/.env
+WorkingDirectory=/opt/spillsnap-backend
+EnvironmentFile=/opt/spillsnap-backend/.env
 Environment=NODE_ENV=production
 Environment=PORT=3000
 ExecStart=/usr/bin/node dist/main.js

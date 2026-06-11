@@ -8,8 +8,8 @@
 module.exports = {
   apps: [
     {
-      name: 'spendsnap-api',
-      cwd: '/opt/spendsnap-backend',
+      name: 'spillnap-api',
+      cwd: '/opt/spillsnap-backend',
       script: 'dist/main.js',
       instances: 1,
       exec_mode: 'fork',
