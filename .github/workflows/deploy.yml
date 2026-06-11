@@ -59,7 +59,10 @@ jobs:
             # overwriting a good value with a blank.
             upsert_env() {
               local key="$1" val="$2" file=/opt/spillsnap-backend/.env
-              [ -z "$val" ] && return 0
+              # Skip unset secrets. Must be a real if-block: under `set -e`, the
+              # form `[ -z "$val" ] && return 0` returns 1 when val is non-empty,
+              # which aborts the whole deploy script.
+              if [ -z "$val" ]; then return 0; fi
               touch "$file"
               if grep -q "^${key}=" "$file"; then
                 # Use a non-/ delimiter; secrets may contain / but not @.

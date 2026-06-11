@@ -54,7 +54,10 @@ export class Receipt {
   @Index()
   user: User;
 
-  @Column({ name: 'user_id' })
+  // uuid to match users.id (the FK target). Without the explicit type TypeORM
+  // would infer varchar from the TS string, diverging from users.id and
+  // breaking the ON DELETE CASCADE foreign key. See migration 006.
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
   @Column()
