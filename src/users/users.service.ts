@@ -20,8 +20,8 @@ export class UsersService {
     return this.repo.findOne({ where: { email: email.toLowerCase() } });
   }
 
-  async findBySupabaseId(supabaseId: string): Promise<User | null> {
-    return this.repo.findOne({ where: { supabaseId } });
+  async findByClerkId(clerkId: string): Promise<User | null> {
+    return this.repo.findOne({ where: { clerkId } });
   }
 
   /**

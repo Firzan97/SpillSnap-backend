@@ -65,7 +65,7 @@ export interface SettingsScreen {
 // ── Gating ───────────────────────────────────────────────────────────────────
 /**
  * Feature flags for rows that exist in the design but are not part of Phase 1.
- * Flip a flag to true (or bump ACTIVE_PHASE) to surface a row — no app release.
+ * Flip a flag to true (or bump ACTIVE_PHASE) to surface a row - no app release.
  */
 export const SETTINGS_FLAGS = {
   twoFactor: false,
@@ -79,7 +79,7 @@ export type SettingsFlag = keyof typeof SETTINGS_FLAGS;
 
 export const ACTIVE_PHASE = 1;
 
-/** Client platform — drives platform-specific rows (e.g. Face ID is iOS-only). */
+/** Client platform - drives platform-specific rows (e.g. Face ID is iOS-only). */
 export type Platform = 'ios' | 'android' | 'web';
 
 /**
@@ -124,7 +124,7 @@ const SITE = 'https://spillsnap.com';
 
 // ── Screen builders ──────────────────────────────────────────────────────────
 
-/** Settings index — the menu shown on the Profile screen. */
+/** Settings index - the menu shown on the Profile screen. */
 export function buildSettingsIndex(platform?: Platform): SettingsScreen {
   const sections: ManifestSection[] = [
     {
@@ -157,7 +157,7 @@ export function buildSettingsIndex(platform?: Platform): SettingsScreen {
           target: 'settings-export',
           sub: 'CSV for LHDN e-Filing',
         },
-        // Phase 2 — appears when the lhdnRow flag is enabled.
+        // Phase 2 - appears when the lhdnRow flag is enabled.
         {
           id: 'lhdn',
           type: 'navigation',
@@ -198,7 +198,7 @@ export function buildSettingsIndex(platform?: Platform): SettingsScreen {
   return { title: 'Settings', sections: resolve(sections, platform) };
 }
 
-/** Account & security screen — identity + security controls. */
+/** Account & security screen - identity + security controls. */
 export function buildAccountScreen(
   user: User,
   faceIdUnlock: boolean,
@@ -235,7 +235,7 @@ export function buildAccountScreen(
     {
       title: 'Security',
       rows: [
-        // Face ID is iOS-only for now — hidden on Android/Web.
+        // Face ID is iOS-only for now - hidden on Android/Web.
         {
           id: 'face-id',
           type: 'toggle',
@@ -275,7 +275,7 @@ export function buildAccountScreen(
   return { title: 'Account & security', sections: resolve(sections, platform) };
 }
 
-/** Help & support screen — static links + app meta. */
+/** Help & support screen - static links + app meta. */
 export function buildHelpScreen(appVersion: string): SettingsScreen {
   const sections: ManifestSection[] = [
     {

@@ -107,7 +107,7 @@ Set **`NODE_ENV=production`** in prod — this disables Swagger and TypeORM `syn
 
 The Stripe webhook needs the **raw request body** (the app is created with `rawBody: true`) to verify signatures — keep that intact behind any proxy.
 
-Deployment (Exabytes VPS + Caddy + systemd) is documented in [`deploy/DEPLOY.md`](deploy/DEPLOY.md), with `deploy/Caddyfile`, `deploy/spendsnap-api.service`, and `deploy/deploy.sh`.
+Deployment (Exabytes VPS + Caddy + systemd) is documented in [`deploy/DEPLOY.md`](deploy/DEPLOY.md), with `deploy/Caddyfile`, `deploy/spillsnap-api.service`, and `deploy/deploy.sh`.
 
 ## License
 

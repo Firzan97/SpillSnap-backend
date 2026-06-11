@@ -142,7 +142,7 @@ export class StorageService {
 
     const out: { path: string; createdAt: number }[] = [];
     for (const folder of folders) {
-      // Real files have metadata; folders don't — recurse into folders only.
+      // Real files have metadata; folders don't - recurse into folders only.
       if (folder.id) continue;
       const { data: files } = await root.list(folder.name, { limit: 1000 });
       for (const f of files ?? []) {

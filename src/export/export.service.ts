@@ -4,7 +4,7 @@ import {
   NotImplementedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Receipt } from '../receipts/entities/receipt.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateExportDto } from './dto/create-export.dto';
@@ -12,6 +12,14 @@ import { ExportSummaryQueryDto } from './dto/export-summary-query.dto';
 import { Export, ExportFormat } from './entities/export.entity';
 
 type CsvValue = string | number | boolean | null | undefined;
+
+/** Receipt selection for an export: a date window plus optional category/tag filters. */
+export interface ExportFilter {
+  dateFrom?: string;
+  dateTo?: string;
+  categories?: string[];
+  tags?: string[];
+}
 
 /** Quote a CSV field per RFC 4180 (wrap + double embedded quotes when needed). */
 function csvCell(value: CsvValue): string {
@@ -36,16 +44,17 @@ export class ExportService {
     private readonly exportRepo: Repository<Export>,
   ) {}
 
-  /** Counts + total over the chosen range — drives the summary card & button label. */
+  /** Counts + total over the chosen filter - drives the summary card & button label. */
   async summary(user: User, q: ExportSummaryQueryDto) {
-    const agg = await this.rangeQuery(user, q.dateFrom, q.dateTo)
-      .select('COUNT(*)', 'count')
-      .addSelect('COALESCE(SUM(COALESCE(r.base_amount, r.amount)), 0)', 'total')
-      .getRawOne<{ count: string; total: string }>();
+    const receipts = await this.fetchFiltered(user, q);
+    const total = receipts.reduce(
+      (sum, r) => sum + Number(r.baseAmount ?? r.amount),
+      0,
+    );
 
     return {
-      receiptCount: Number(agg?.count ?? 0),
-      total: Number(Number(agg?.total ?? 0).toFixed(2)),
+      receiptCount: receipts.length,
+      total: Number(total.toFixed(2)),
       currency: 'MYR',
       dateFrom: q.dateFrom ?? null,
       dateTo: q.dateTo ?? null,
@@ -56,13 +65,11 @@ export class ExportService {
   async create(user: User, dto: CreateExportDto) {
     if (dto.format === ExportFormat.PDF) {
       throw new NotImplementedException(
-        'PDF export is coming soon — use CSV for now.',
+        'PDF export is coming soon - use CSV for now.',
       );
     }
 
-    const receipts = await this.rangeQuery(user, dto.dateFrom, dto.dateTo)
-      .orderBy('r.receipt_date', 'DESC')
-      .getMany();
+    const receipts = await this.fetchFiltered(user, dto);
 
     const includeTagsNotes = dto.includeTagsNotes ?? true;
     const includeLineItems = dto.includeLineItems ?? true;
@@ -77,6 +84,8 @@ export class ExportService {
         filename,
         dateFrom: dto.dateFrom ? new Date(dto.dateFrom) : null,
         dateTo: dto.dateTo ? new Date(dto.dateTo) : null,
+        categories: dto.categories?.length ? dto.categories : null,
+        tags: dto.tags?.length ? dto.tags : null,
         includeTagsNotes,
         includeLineItems,
         receiptCount: receipts.length,
@@ -118,13 +127,12 @@ export class ExportService {
     });
     if (!row) throw new NotFoundException('Export not found');
 
-    const receipts = await this.rangeQuery(
-      user,
-      row.dateFrom?.toISOString(),
-      row.dateTo?.toISOString(),
-    )
-      .orderBy('r.receipt_date', 'DESC')
-      .getMany();
+    const receipts = await this.fetchFiltered(user, {
+      dateFrom: row.dateFrom?.toISOString(),
+      dateTo: row.dateTo?.toISOString(),
+      categories: row.categories ?? undefined,
+      tags: row.tags ?? undefined,
+    });
 
     const csv = this.buildCsv(
       receipts,
@@ -144,17 +152,32 @@ export class ExportService {
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  private rangeQuery(
+  /**
+   * Select receipts for an export. Date range + categories filter in SQL; tags
+   * (a `simple-array` text column, not jsonb) are intersected in JS so partial
+   * matches like "foo" vs "foobar" can't leak in.
+   */
+  private async fetchFiltered(
     user: User,
-    dateFrom?: string,
-    dateTo?: string,
-  ): SelectQueryBuilder<Receipt> {
+    f: ExportFilter,
+  ): Promise<Receipt[]> {
     const qb = this.receiptRepo
       .createQueryBuilder('r')
       .where('r.user_id = :userId', { userId: user.id });
-    if (dateFrom) qb.andWhere('r.receipt_date >= :from', { from: dateFrom });
-    if (dateTo) qb.andWhere('r.receipt_date <= :to', { to: dateTo });
-    return qb;
+    if (f.dateFrom) qb.andWhere('r.receipt_date >= :from', { from: f.dateFrom });
+    if (f.dateTo) qb.andWhere('r.receipt_date <= :to', { to: f.dateTo });
+    if (f.categories?.length)
+      qb.andWhere('r.category IN (:...categories)', {
+        categories: f.categories,
+      });
+    qb.orderBy('r.receipt_date', 'DESC');
+
+    const rows = await qb.getMany();
+    if (f.tags?.length) {
+      const want = new Set(f.tags);
+      return rows.filter((r) => (r.tags ?? []).some((t) => want.has(t)));
+    }
+    return rows;
   }
 
   private buildCsv(

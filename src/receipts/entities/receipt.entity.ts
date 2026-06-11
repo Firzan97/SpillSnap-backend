@@ -23,7 +23,7 @@ export enum ReceiptCategory {
 
 export enum LhdnRelief {
   LIFESTYLE = 'lifestyle', // S46(1)(p) lifestyle - RM2,500 (shared: books, computers, internet, courses)
-  BOOKS = 'books', // claimed WITHIN the lifestyle cap, not separate — see relief-rules.config.ts
+  BOOKS = 'books', // claimed WITHIN the lifestyle cap, not separate - see relief-rules.config.ts
   SPORTS = 'sports', // S46(1)(p) sports - RM1,000 (additional, on top of lifestyle)
   MEDICAL = 'medical', // S46(1)(d) - RM10,000
   EV_CHARGING = 'ev_charging', // RM2,500

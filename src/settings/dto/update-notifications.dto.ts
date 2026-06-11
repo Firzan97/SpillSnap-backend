@@ -10,7 +10,6 @@ import {
 
 class ChannelsDto {
   @IsOptional() @IsBoolean() push?: boolean;
-  @IsOptional() @IsBoolean() email?: boolean;
 }
 
 class QuietHoursDto {
@@ -20,7 +19,7 @@ class QuietHoursDto {
 }
 
 export class UpdateNotificationsDto {
-  @ApiPropertyOptional({ description: 'Channel toggles (push/email)' })
+  @ApiPropertyOptional({ description: 'Channel toggles (push)' })
   @IsOptional()
   @ValidateNested()
   @Type(() => ChannelsDto)

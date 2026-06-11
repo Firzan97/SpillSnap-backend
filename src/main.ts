@@ -12,7 +12,7 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // CORS — allow Expo dev client and web.
+  // CORS - allow Expo dev client and web.
   // FRONTEND_URL may be a comma-separated list (apex, www, app subdomain, …).
   const frontendOrigins = (process.env.FRONTEND_URL ?? '')
     .split(',')
@@ -28,7 +28,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Global validation pipe — strip unknown fields, transform types
+  // Global validation pipe - strip unknown fields, transform types
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -40,7 +40,7 @@ async function bootstrap() {
   // Global exception filter
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // Swagger — only in non-production
+  // Swagger - only in non-production
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('SpillSnap API')
@@ -51,7 +51,7 @@ async function bootstrap() {
       .addBearerAuth()
       .addTag(
         'auth',
-        'Authentication — verify Supabase token, sync user (Supabase Auth owns login/SSO)',
+        'Authentication - verify Clerk session token, sync user (Clerk owns login/SSO)',
       )
       .addTag('dashboard', 'Home dashboard endpoint')
       .addTag(
@@ -60,11 +60,11 @@ async function bootstrap() {
       )
       .addTag(
         'leaderboard',
-        'Receipt-upload leaderboard — podium, rankings, and current-user standing',
+        'Receipt-upload leaderboard - podium, rankings, and current-user standing',
       )
       .addTag(
         'notifications',
-        'In-app notification feed — list, unread count, mark read',
+        'In-app notification feed - list, unread count, mark read',
       )
       .addTag(
         'settings',
@@ -72,7 +72,7 @@ async function bootstrap() {
       )
       .addTag(
         'export',
-        'CSV export for LHDN e-Filing — summary, generate, re-download',
+        'CSV export for LHDN e-Filing - summary, generate, re-download',
       )
       .addTag('pricing', 'Public plan catalog (Free + Pro)')
       .addTag(
@@ -81,7 +81,7 @@ async function bootstrap() {
       )
       .addTag(
         'public',
-        'Unauthenticated landing-page data — marketing stats and approved testimonials (server-cached hourly)',
+        'Unauthenticated landing-page data - marketing stats and approved testimonials (server-cached hourly)',
       )
       .addTag(
         'webhooks',

@@ -6,13 +6,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { User } from '../users/entities/user.entity';
 import { DashboardService } from './dashboard.service';
 
 @ApiTags('dashboard')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(ClerkAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
@@ -26,7 +26,7 @@ export class DashboardController {
   @ApiResponse({ status: 200, description: 'Dashboard payload' })
   @ApiResponse({
     status: 401,
-    description: 'Unauthorized — missing or expired token',
+    description: 'Unauthorized - missing or expired token',
   })
   getDashboard(@CurrentUser() user: User) {
     return this.dashboardService.getDashboard(user);

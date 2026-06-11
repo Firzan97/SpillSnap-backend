@@ -15,7 +15,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { BackfillSummaryDto } from './dto/backfill-summary.dto';
@@ -37,7 +37,7 @@ function parseYa(ya?: string): number | undefined {
 
 @ApiTags('tax')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(ClerkAuthGuard)
 @Controller('tax')
 export class TaxController {
   constructor(
@@ -65,11 +65,32 @@ export class TaxController {
     return this.tax.getReliefSummary(user, parseYa(ya));
   }
 
+  @Get('relief-receipts')
+  @ApiOperation({
+    summary: 'Receipts that make up one relief bucket',
+    description:
+      'Confirmed receipts tagged to the given relief bucket within the YA window, for the relief drill-down list.',
+  })
+  @ApiQuery({ name: 'bucket', required: true, example: 'lifestyle' })
+  @ApiQuery({
+    name: 'ya',
+    required: false,
+    example: 2025,
+    description: 'Year of Assessment. Omit to use the active YA.',
+  })
+  getReliefReceipts(
+    @CurrentUser() user: User,
+    @Query('bucket') bucket: string,
+    @Query('ya') ya?: string,
+  ) {
+    return this.tax.getReliefReceipts(user, bucket, parseYa(ya));
+  }
+
   @Patch('manual-reliefs')
   @ApiOperation({
     summary: 'Save optional manual (non-receipt) reliefs for a YA',
     description:
-      'Stores user-entered reliefs that no receipt can capture (EPF, life/medical insurance, PRS, SOCSO, SSPN, housing-loan interest, plus disability/spouse/children status). All optional — improves the estimate but can be skipped. Returns the recomputed relief summary.',
+      'Stores user-entered reliefs that no receipt can capture (EPF, life/medical insurance, PRS, SOCSO, SSPN, housing-loan interest, plus disability/spouse/children status). All optional - improves the estimate but can be skipped. Returns the recomputed relief summary.',
   })
   @ApiQuery({
     name: 'ya',
@@ -91,7 +112,7 @@ export class TaxController {
   @ApiOperation({
     summary: 'Tag past receipts that have no relief category yet',
     description:
-      'Finds the user’s confirmed receipts with no relief tag and fills them in — free category→relief map first, then the AI classifier for the rest. Never overwrites a user-set tag; low-confidence guesses are left for the user to confirm. Returns counts of what happened.',
+      'Finds the user’s confirmed receipts with no relief tag and fills them in - free category→relief map first, then the AI classifier for the rest. Never overwrites a user-set tag; low-confidence guesses are left for the user to confirm. Returns counts of what happened.',
   })
   @ApiOkResponse({ type: BackfillSummaryDto })
   reliefBackfill(@CurrentUser() user: User): Promise<BackfillSummaryDto> {

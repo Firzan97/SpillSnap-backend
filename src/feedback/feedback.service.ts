@@ -61,7 +61,7 @@ export class FeedbackService {
         return res;
       })
       .catch((err) => {
-        // Serve the stale snapshot on failure — a slightly old testimonials list
+        // Serve the stale snapshot on failure - a slightly old testimonials list
         // beats a 500 on the landing page. (Web renders a real empty state when
         // items is empty, so an empty table is safe too.)
         this.logger.error('Failed to compute public feedback', err as Error);

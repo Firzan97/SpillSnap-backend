@@ -55,7 +55,7 @@ export class ReceiptsService {
     const extracted = await this.extraction.extract(files);
 
     if (!extracted.isReceipt) {
-      // The quota guard already reserved today's slot — hand it back so a
+      // The quota guard already reserved today's slot - hand it back so a
       // mistaken upload doesn't burn a Free user's 1/day allowance.
       await this.usage.refund(user.id);
       throw new UnprocessableEntityException({
@@ -312,7 +312,7 @@ export class ReceiptsService {
   /**
    * OCR sometimes returns an unparseable or implausible date (a future date, or
    * a misread year). A receipt is always a past purchase, so fall back to "now"
-   * for missing/invalid/future dates — otherwise the receipt silently lands
+   * for missing/invalid/future dates - otherwise the receipt silently lands
    * outside the user's "this month" views.
    */
   private normalizeReceiptDate(input: string): Date {
@@ -339,7 +339,7 @@ export class ReceiptsService {
       const startToday = Math.floor(now.getTime() / DAY_MS);
       const startLast = Math.floor(last.getTime() / DAY_MS);
       const diff = startToday - startLast;
-      if (diff === 0) return; // already snapped today — nothing to update
+      if (diff === 0) return; // already snapped today - nothing to update
       streak = diff === 1 ? user.streakCount + 1 : 1;
     }
 

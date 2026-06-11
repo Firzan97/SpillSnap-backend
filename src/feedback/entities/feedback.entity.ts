@@ -9,7 +9,7 @@ import {
 
 /**
  * A customer testimonial shown on the public marketing site
- * ("Loved by people who hate doing taxes."). Curated/moderated — only rows with
+ * ("Loved by people who hate doing taxes."). Curated/moderated - only rows with
  * `approved = true` are served publicly, so quotes can be drafted before going
  * live. No FK to users: the display name/role are stored denormalized so a quote
  * survives the account it came from and can be lightly edited for the site.
@@ -28,7 +28,7 @@ export class Feedback {
   @Column({ default: '' })
   role: string; // e.g. "F&B owner · Penang"
 
-  // Optional presentation overrides — derived from `name` when left blank so the
+  // Optional presentation overrides - derived from `name` when left blank so the
   // minimum a quote needs is { quote, name }.
   @Column({ name: 'avatar_color', default: '' })
   avatarColor: string; // hex, e.g. "#A78BFA"

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -35,7 +35,7 @@ export class TaxService {
 
   /**
    * Relief progress for a Year of Assessment: how much the user has spent in
-   * each relief bucket vs its cap. Computed live — receipts only store the
+   * each relief bucket vs its cap. Computed live - receipts only store the
    * relief tag + amount; the caps come from the versioned rules for that YA.
    */
   async getReliefSummary(
@@ -68,7 +68,7 @@ export class TaxService {
     const byBucket = new Map<string, { spent: number; count: number }>();
     for (const row of rows) {
       const bucket = bucketForRelief(rules, row.relief);
-      if (!bucket) continue; // tag not claimable this YA — keep receipt, count RM0
+      if (!bucket) continue; // tag not claimable this YA - keep receipt, count RM0
       const acc = byBucket.get(bucket.key) ?? { spent: 0, count: 0 };
       acc.spent += Number(row.spent);
       acc.count += Number(row.count);
@@ -127,12 +127,66 @@ export class TaxService {
       deadline: `${targetYa + 1}-04-30`,
       disclaimer:
         rules.status === 'provisional'
-          ? `Estimated using the latest confirmed LHDN figures — YA${targetYa} reliefs are not finalised yet.`
+          ? `Estimated using the latest confirmed LHDN figures - YA${targetYa} reliefs are not finalised yet.`
           : null,
       buckets,
       manualReliefs,
       manualClaimable: round2(manualClaimableTotal),
       totalClaimable,
+    };
+  }
+
+  /**
+   * The confirmed receipts that make up one relief bucket for a YA - drives the
+   * drill-down list when the user taps a relief category. Returns lightweight
+   * rows (the detail screen fetches the full receipt by id on tap).
+   */
+  async getReliefReceipts(user: User, bucketKey: string, ya?: number) {
+    const period = resolveFilingPeriod();
+    const targetYa = ya ?? period.ya;
+    const rules = rulesForYa(targetYa);
+    const bucket = rules.buckets.find((b) => b.key === bucketKey);
+    if (!bucket) throw new NotFoundException('Unknown relief bucket');
+
+    const from = new Date(`${targetYa}-01-01T00:00:00+08:00`);
+    const to = new Date(`${targetYa + 1}-01-01T00:00:00+08:00`);
+
+    const rows = await this.receipts
+      .createQueryBuilder('r')
+      .where('r.user_id = :uid', { uid: user.id })
+      .andWhere('r.status = :status', { status: ReceiptStatus.CONFIRMED })
+      .andWhere('r.lhdn_relief IN (:...members)', { members: bucket.members })
+      .andWhere('r.receipt_date >= :from', { from })
+      .andWhere('r.receipt_date < :to', { to })
+      .orderBy('r.receipt_date', 'DESC')
+      .getMany();
+
+    const baseAmt = (r: Receipt) => Number(r.baseAmount ?? r.amount);
+    const spent = round2(rows.reduce((s, r) => s + baseAmt(r), 0));
+
+    return {
+      ya: targetYa,
+      bucket: {
+        key: bucket.key,
+        label: bucket.label,
+        section: bucket.section,
+        cap: bucket.cap,
+        spent,
+        claimable: round2(Math.min(spent, bucket.cap)),
+      },
+      receipts: rows.map((r) => ({
+        id: r.id,
+        merchant: r.merchant,
+        amount: Number(r.amount),
+        currency: r.currency,
+        baseAmount: round2(baseAmt(r)),
+        baseCurrency: r.baseCurrency ?? user.baseCurrency ?? 'MYR',
+        category: r.category,
+        receiptDate: r.receiptDate,
+        taxEligible: r.taxEligible,
+        lhdnRelief: r.lhdnRelief,
+        lineItemCount: r.lineItems?.length ?? 0,
+      })),
     };
   }
 

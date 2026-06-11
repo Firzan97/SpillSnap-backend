@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DailyUsage } from './entities/daily-usage.entity';
 
-/** Calendar date (YYYY-MM-DD) in Malaysia time — the quota resets at MY midnight. */
+/** Calendar date (YYYY-MM-DD) in Malaysia time - the quota resets at MY midnight. */
 export function malaysiaDay(now: Date = new Date()): string {
   // en-CA renders ISO-style YYYY-MM-DD.
   return new Intl.DateTimeFormat('en-CA', {
@@ -55,8 +55,8 @@ export class UsageService {
 
   /**
    * Give back one reserved upload for today (floor 0). Used when a slot was
-   * consumed by the quota guard but the upload was then rejected — e.g. the
-   * image turned out not to be a receipt — so it shouldn't count against quota.
+   * consumed by the quota guard but the upload was then rejected - e.g. the
+   * image turned out not to be a receipt - so it shouldn't count against quota.
    */
   async refund(userId: string): Promise<void> {
     await this.repo.query(

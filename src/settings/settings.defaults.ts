@@ -3,7 +3,7 @@ import {
   SecurityPrefs,
 } from '../users/entities/user.entity';
 
-/** Notification toggle groups — keys are stable; labels/subs power the UI. */
+/** Notification toggle groups - keys are stable; labels/subs power the UI. */
 export const NOTIFICATION_GROUPS: {
   title: string;
   rows: { key: string; label: string; sub: string; default: boolean }[];
@@ -72,7 +72,7 @@ export function defaultNotificationPrefs(): NotificationPrefs {
   for (const g of NOTIFICATION_GROUPS)
     for (const r of g.rows) prefs[r.key] = r.default;
   return {
-    channels: { push: true, email: true },
+    channels: { push: true },
     prefs,
     quietHours: { enabled: true, from: '10:00 PM', to: '7:00 AM' },
   };
@@ -82,7 +82,7 @@ export function defaultSecurityPrefs(): SecurityPrefs {
   return { faceIdUnlock: true };
 }
 
-/** Colour per category — mirrors the dashboard + frontend category metadata. */
+/** Colour per category - mirrors the dashboard + frontend category metadata. */
 export const CATEGORY_COLORS: Record<string, string> = {
   groceries: '#06B6D4',
   dining: '#22D3EE',

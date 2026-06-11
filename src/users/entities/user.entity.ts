@@ -19,7 +19,7 @@ export enum AuthProvider {
 
 /** Notification preferences (settings → Notifications). */
 export interface NotificationPrefs {
-  channels: { push: boolean; email: boolean };
+  channels: { push: boolean };
   prefs: Record<string, boolean>; // keyed by pref id, e.g. snap, streak, weekly…
   quietHours: { enabled: boolean; from: string; to: string };
 }
@@ -50,10 +50,10 @@ export class User {
   @Column()
   name: string;
 
-  // Supabase Auth (auth.users) is the source of truth for credentials.
-  // This maps the Supabase user id ("sub" claim) to our local profile row.
-  @Column({ name: 'supabase_id', type: 'uuid', unique: true, nullable: true })
-  supabaseId: string | null;
+  // Clerk is the source of truth for credentials. This maps the Clerk user id
+  // ("sub" claim, e.g. user_2abc…) to our local profile row.
+  @Column({ name: 'clerk_id', type: 'varchar', unique: true, nullable: true })
+  clerkId: string | null;
 
   @Column({
     name: 'auth_provider',
@@ -72,6 +72,11 @@ export class User {
   // Base/display currency (ISO 4217). Foreign receipts convert into this.
   @Column({ name: 'base_currency', length: 3, default: 'MYR' })
   baseCurrency: string;
+
+  // Country (ISO 3166-1 alpha-2). Drives the "Malaysia" leaderboard scope.
+  // Defaults to MY — the app is Malaysia-first.
+  @Column({ length: 2, default: 'MY' })
+  country: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.FREE })
   role: UserRole;

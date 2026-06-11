@@ -11,7 +11,7 @@ import {
 import { User } from '../users/entities/user.entity';
 import { CATEGORY_TO_RELIEF } from './relief-rules.config';
 
-// Cheap text-only classifier — no image, just the structured fields we already
+// Cheap text-only classifier - no image, just the structured fields we already
 // extracted at capture. Confident guesses are applied; below this they're left
 // untagged and surfaced for the user to confirm (so totals stay trustworthy).
 const MODEL = 'claude-haiku-4-5-20251001';
@@ -47,9 +47,9 @@ interface ClassifyResult {
 
 export interface BackfillSummary {
   scanned: number; // untagged receipts examined
-  autoMapped: number; // Layer 1 — free category→relief map
-  aiTagged: number; // Layer 2 — Haiku, applied (confident)
-  needsReview: number; // Layer 2 — relief suggested but low confidence, left untagged
+  autoMapped: number; // Layer 1 - free category→relief map
+  aiTagged: number; // Layer 2 - Haiku, applied (confident)
+  needsReview: number; // Layer 2 - relief suggested but low confidence, left untagged
   stillNone: number; // genuinely not claimable
 }
 
@@ -66,7 +66,7 @@ export class ReliefBackfillService {
     const apiKey = config.get<string>('ANTHROPIC_API_KEY')?.trim();
     if (!apiKey) {
       throw new Error(
-        'ANTHROPIC_API_KEY is missing or empty — set a real key in the backend .env before starting.',
+        'ANTHROPIC_API_KEY is missing or empty - set a real key in the backend .env before starting.',
       );
     }
     this.client = new Anthropic({ apiKey });
@@ -124,7 +124,7 @@ export class ReliefBackfillService {
           continue;
         }
         if (res.confidence < APPLY_THRESHOLD) {
-          // Suggested but unsure — leave untagged so it doesn't inflate totals.
+          // Suggested but unsure - leave untagged so it doesn't inflate totals.
           summary.needsReview++;
           continue;
         }
@@ -195,7 +195,7 @@ export class ReliefBackfillService {
         ?.results;
       return Array.isArray(results) ? results : [];
     } catch (err) {
-      // Don't fail the whole back-fill on one bad batch — skip it (those stay
+      // Don't fail the whole back-fill on one bad batch - skip it (those stay
       // untagged and can be retried) and log for visibility.
       this.logger.warn(
         `Relief classify batch failed (${batch.length} receipts): ${(err as Error).message}`,

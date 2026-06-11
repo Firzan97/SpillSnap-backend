@@ -3,11 +3,11 @@ import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { SupabaseStrategy } from './strategies/supabase.strategy';
+import { ClerkStrategy } from './strategies/clerk.strategy';
 
 @Module({
   imports: [UsersModule, PassportModule],
-  providers: [AuthService, SupabaseStrategy],
+  providers: [AuthService, ClerkStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

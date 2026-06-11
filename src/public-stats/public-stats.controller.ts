@@ -3,7 +3,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PublicStatsResponseDto } from './dto/public-stats-response.dto';
 import { PublicStatsService } from './public-stats.service';
 
-// Public, unauthenticated — the marketing site has no token. No SupabaseAuthGuard.
+// Public, unauthenticated - the marketing site has no token. No ClerkAuthGuard.
 @ApiTags('public')
 @Controller('public/stats')
 export class PublicStatsController {
@@ -15,7 +15,7 @@ export class PublicStatsController {
   @ApiOperation({
     summary: 'Public marketing stats',
     description:
-      'Headline counters (receipts, members, free/pro, tax savings) and anonymized top snappers for the landing page. Server-cached and refreshed hourly — fetch once on page load, do not poll.',
+      'Headline counters (receipts, members, free/pro, tax savings) and anonymized top snappers for the landing page. Server-cached and refreshed hourly - fetch once on page load, do not poll.',
   })
   @ApiOkResponse({ type: PublicStatsResponseDto })
   getStats(): Promise<PublicStatsResponseDto> {

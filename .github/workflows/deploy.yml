@@ -30,19 +30,53 @@ jobs:
     steps:
       - name: SSH → pull, build, restart on VPS
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          # WhatsApp Cloud API secrets, sourced from GitHub repo/Environment secrets.
+          # Forwarded into the remote shell via `envs` below and upserted into the
+          # VPS .env so PM2 (--update-env) picks them up on reload. Empty secrets
+          # are skipped, so this never clobbers an existing value with a blank.
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          WHATSAPP_APP_SECRET: ${{ secrets.WHATSAPP_APP_SECRET }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          WHATSAPP_WELCOME_TEMPLATE: ${{ secrets.WHATSAPP_WELCOME_TEMPLATE }}
+          WHATSAPP_TEMPLATE_LANG: ${{ secrets.WHATSAPP_TEMPLATE_LANG }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }} # optional; defaults to 22 if unset
           script_stop: true # abort on first failed command
+          envs: WHATSAPP_PHONE_NUMBER_ID,WHATSAPP_ACCESS_TOKEN,WHATSAPP_APP_SECRET,WHATSAPP_VERIFY_TOKEN,WHATSAPP_WELCOME_TEMPLATE,WHATSAPP_TEMPLATE_LANG
           script: |
-            cd /opt/spendsnap-backend
+            cd /opt/spillsnap-backend
             # Run fresh each deploy (not from the repo's possibly-stale deploy.sh):
             # clear the "dubious ownership" block for whichever user the CI logs in as.
-            git config --global --add safe.directory /opt/spendsnap-backend || true
+            git config --global --add safe.directory /opt/spillsnap-backend || true
+
+            # Upsert WhatsApp secrets into .env before the build/reload so PM2 picks
+            # them up. Skip any that arrive empty (secret not configured) to avoid
+            # overwriting a good value with a blank.
+            upsert_env() {
+              local key="$1" val="$2" file=/opt/spillsnap-backend/.env
+              [ -z "$val" ] && return 0
+              touch "$file"
+              if grep -q "^${key}=" "$file"; then
+                # Use a non-/ delimiter; secrets may contain / but not @.
+                sed -i "s@^${key}=.*@${key}=${val}@" "$file"
+              else
+                echo "${key}=${val}" >> "$file"
+              fi
+            }
+            upsert_env WHATSAPP_PHONE_NUMBER_ID   "$WHATSAPP_PHONE_NUMBER_ID"
+            upsert_env WHATSAPP_ACCESS_TOKEN      "$WHATSAPP_ACCESS_TOKEN"
+            upsert_env WHATSAPP_APP_SECRET        "$WHATSAPP_APP_SECRET"
+            upsert_env WHATSAPP_VERIFY_TOKEN      "$WHATSAPP_VERIFY_TOKEN"
+            upsert_env WHATSAPP_WELCOME_TEMPLATE  "$WHATSAPP_WELCOME_TEMPLATE"
+            upsert_env WHATSAPP_TEMPLATE_LANG     "$WHATSAPP_TEMPLATE_LANG"
+
             # Trust github.com's host key, and pull with the repo's deploy key by
             # absolute path (works regardless of which user/HOME the CI logs in as).
             # deploy.sh inherits GIT_SSH_COMMAND.
-            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /opt/spendsnap-backend/.ssh/id_ed25519"
+            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /opt/spillsnap-backend/.ssh/id_ed25519"
             ./deploy/deploy.sh
