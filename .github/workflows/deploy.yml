@@ -46,10 +46,13 @@ jobs:
             # absolute path (works regardless of which user/HOME the CI logs in as).
             # deploy.sh inherits GIT_SSH_COMMAND.
             export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /opt/spillsnap-backend/.ssh/id_ed25519"
-            # Pull here FIRST so a stale on-disk deploy.sh (e.g. one still pointing
-            # at the pre-rename /opt/spendsnap-backend path) gets refreshed before
-            # we execute it. deploy.sh pulls again itself, which is a harmless no-op.
-            git pull origin main
+            # Refresh FIRST so a stale on-disk deploy.sh (e.g. one still pointing
+            # at the pre-rename /opt/spendsnap-backend path) is updated before we
+            # execute it. Use fetch + reset --hard (not pull) so the deploy never
+            # aborts on stray local edits to tracked files (origin/main is the
+            # source of truth; .env is untracked so it survives).
+            git fetch origin main
+            git reset --hard origin/main
             ./deploy/deploy.sh
             # NOTE: WhatsApp secrets (WHATSAPP_*) are set directly in the VPS
             # /opt/spillsnap-backend/.env, not injected from CI. An earlier attempt

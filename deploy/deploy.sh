@@ -9,8 +9,9 @@ cd /opt/spillsnap-backend
 # Without this, git aborts with "detected dubious ownership".
 git config --global --add safe.directory /opt/spillsnap-backend 2>/dev/null || true
 
-echo "→ Pulling latest..."
-git pull origin main
+echo "→ Syncing to origin/main (source of truth; discards stray local edits)..."
+git fetch origin main
+git reset --hard origin/main
 
 echo "→ Installing deps (clean)..."
 npm ci
