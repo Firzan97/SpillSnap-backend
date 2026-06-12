@@ -12,7 +12,7 @@ set -euo pipefail
 
 APP_USER=spillsnap
 APP_DIR=/opt/spillsnap-backend
-REPO_URL=git@github.com:Firzan97/SpillSnap-backend.git
+REPO_URL=git@github.com:Firzan97/SpendSnap-backend.git
 NODE_MAJOR=20
 
 if [[ $EUID -ne 0 ]]; then
