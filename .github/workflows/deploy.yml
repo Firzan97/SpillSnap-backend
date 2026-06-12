@@ -45,7 +45,7 @@ jobs:
             # Pull from GitHub with the deploy key kept OUTSIDE the repo dir
             # (/root/.ssh, not the app home) so `git clean` in the working tree can
             # never delete it. deploy.sh inherits GIT_SSH_COMMAND.
-            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /root/.ssh/id_ed25519"
+            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /root/.ssh/github_deploy"
             # Refresh FIRST so a stale on-disk deploy.sh (e.g. one still pointing
             # at the pre-rename /opt/spendsnap-backend path) is updated before we
             # execute it. Use fetch + reset --hard (not pull) so the deploy never
