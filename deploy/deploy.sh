@@ -12,6 +12,10 @@ git config --global --add safe.directory /opt/spillsnap-backend 2>/dev/null || t
 echo "→ Syncing to origin/main (source of truth; discards stray local edits)..."
 git fetch origin main
 git reset --hard origin/main
+# Drop stray untracked files (e.g. source deleted in a refactor) so a stale
+# .ts left on disk isn't compiled. .env/.env.*, dist, node_modules are
+# gitignored, so this leaves them untouched.
+git clean -fd
 
 echo "→ Installing deps (clean)..."
 npm ci

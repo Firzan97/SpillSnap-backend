@@ -53,6 +53,10 @@ jobs:
             # source of truth; .env is untracked so it survives).
             git fetch origin main
             git reset --hard origin/main
+            # Remove stray untracked files (e.g. old src deleted in a refactor like
+            # the Supabase→Clerk auth move) so they don't get compiled. .env/.env.*,
+            # dist and node_modules are gitignored, so clean leaves them untouched.
+            git clean -fd
             ./deploy/deploy.sh
             # NOTE: WhatsApp secrets (WHATSAPP_*) are set directly in the VPS
             # /opt/spillsnap-backend/.env, not injected from CI. An earlier attempt
