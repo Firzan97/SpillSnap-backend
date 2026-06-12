@@ -12,10 +12,11 @@ git config --global --add safe.directory /opt/spillsnap-backend 2>/dev/null || t
 echo "→ Syncing to origin/main (source of truth; discards stray local edits)..."
 git fetch origin main
 git reset --hard origin/main
-# Drop stray untracked files (e.g. source deleted in a refactor) so a stale
-# .ts left on disk isn't compiled. .env/.env.*, dist, node_modules are
-# gitignored, so this leaves them untouched.
-git clean -fd
+# Drop stray untracked files under src/ ONLY (e.g. source deleted in a refactor)
+# so a stale .ts left on disk isn't compiled. Scoped to src/ because the app
+# user's home IS this repo dir — ~/.ssh (deploy key) and ~/.pm2 sit untracked at
+# the repo root, and an unscoped clean would delete them.
+git clean -fd src/
 
 echo "→ Installing deps (clean)..."
 npm ci
