@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClerkClient, type ClerkClient } from '@clerk/backend';
 import { UsersService } from '../users/users.service';
 import { AuthProvider, User } from '../users/entities/user.entity';
+import { WhatsappSenderService } from '../whatsapp/whatsapp-sender.service';
 
 const TRIAL_DAYS = 7;
 
@@ -37,11 +38,13 @@ export interface ClerkJwtPayload {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly clerk: ClerkClient;
 
   constructor(
     private readonly usersService: UsersService,
-    config: ConfigService,
+    private readonly config: ConfigService,
+    private readonly whatsapp: WhatsappSenderService,
   ) {
     this.clerk = createClerkClient({
       secretKey: config.getOrThrow<string>('CLERK_SECRET_KEY'),
@@ -101,7 +104,7 @@ export class AuthService {
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
 
-    return this.usersService.create({
+    const created = await this.usersService.create({
       clerkId: payload.sub,
       email,
       name,
@@ -111,6 +114,31 @@ export class AuthService {
       phone,
       trialEndsAt,
     });
+
+    // Genuine first-time signup → WhatsApp onboarding ping (cold → template).
+    // Fire-and-forget so a messaging hiccup never blocks sign-in.
+    void this.sendOnboarding(created);
+
+    return created;
+  }
+
+  /**
+   * Business-initiated WhatsApp onboarding sent once, on first signup. Cold
+   * messages must be an approved template (no open 24h window yet). No-op unless
+   * the sender is configured, a template name is set, and the user gave a phone.
+   * Best-effort: never throws into the sign-in flow.
+   */
+  private async sendOnboarding(user: User): Promise<void> {
+    const template = this.config.get<string>('WHATSAPP_ONBOARDING_TEMPLATE');
+    const lang = this.config.get<string>('WHATSAPP_TEMPLATE_LANG') ?? 'en';
+    const phone = user.phone?.replace(/\D/g, '');
+    if (!template || !phone) return;
+    const firstName = user.name?.split(/\s+/)[0] || 'there';
+    try {
+      await this.whatsapp.sendTemplate(phone, template, lang, [firstName]);
+    } catch (e) {
+      this.logger.warn(`Onboarding WhatsApp failed: ${(e as Error).message}`);
+    }
   }
 
   /** Map the user's connected accounts onto our local provider enum. */
