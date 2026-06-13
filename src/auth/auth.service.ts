@@ -130,12 +130,15 @@ export class AuthService {
    */
   private async sendOnboarding(user: User): Promise<void> {
     const template = this.config.get<string>('WHATSAPP_ONBOARDING_TEMPLATE');
-    const lang = this.config.get<string>('WHATSAPP_TEMPLATE_LANG') ?? 'en';
+    // Onboarding language defaults to en_US so Meta's stock `hello_world`
+    // template works out of the box for a smoke test.
+    const lang = this.config.get<string>('WHATSAPP_ONBOARDING_LANG') ?? 'en_US';
     const phone = user.phone?.replace(/\D/g, '');
     if (!template || !phone) return;
-    const firstName = user.name?.split(/\s+/)[0] || 'there';
     try {
-      await this.whatsapp.sendTemplate(phone, template, lang, [firstName]);
+      // Sent with no body params so it works with a static template (and Meta's
+      // pre-approved `hello_world`). Add params here if you later use {{1}}.
+      await this.whatsapp.sendTemplate(phone, template, lang);
     } catch (e) {
       this.logger.warn(`Onboarding WhatsApp failed: ${(e as Error).message}`);
     }
