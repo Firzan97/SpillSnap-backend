@@ -18,6 +18,22 @@ git reset --hard origin/main
 # the repo root, and an unscoped clean would delete them.
 git clean -fd src/
 
+# Upsert CI-managed secrets (forwarded as env vars by the GitHub Action) into the
+# VPS .env so PM2 --update-env picks them up. Robust (no sed): drop any existing
+# KEY= line, append via printf. Skips empties — so running deploy.sh by hand on
+# the box (where these env vars are unset) leaves the existing .env untouched.
+upsert_env() {
+  local key="$1" val="${2:-}" file=/opt/spillsnap-backend/.env
+  if [ -z "$val" ]; then return 0; fi
+  touch "$file"
+  grep -v "^${key}=" "$file" > "$file.tmp" || true
+  printf '%s=%s\n' "$key" "$val" >> "$file.tmp"
+  mv "$file.tmp" "$file"
+  chmod 600 "$file"
+}
+upsert_env CLERK_SECRET_KEY "${CLERK_SECRET_KEY:-}"
+upsert_env CLERK_ISSUER     "${CLERK_ISSUER:-}"
+
 echo "→ Installing deps (clean)..."
 npm ci
 

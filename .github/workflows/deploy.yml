@@ -28,58 +28,55 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: SSH → pull, build, restart on VPS
+      # GitHub-runner → VPS SSH intermittently times out (Exabytes edge filtering
+      # of Azure runner IPs). Two attempts so a transient drop doesn't fail the
+      # deploy; deploy.sh is idempotent, so re-running is safe. CLERK_* secrets are
+      # forwarded (envs) and upserted into the VPS .env by deploy.sh; other secrets
+      # already live on the box.
+      - name: Deploy to VPS
+        id: deploy1
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         env:
-          # App secrets sourced from GitHub secrets, forwarded into the remote
-          # shell (envs below) and upserted into the VPS .env so PM2 picks them up
-          # on --update-env. Empty/unset secrets are skipped (never blank an
-          # existing value). WhatsApp secrets stay on the box (already set there).
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           CLERK_ISSUER: ${{ secrets.CLERK_ISSUER }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }} # for a passphrase-protected key
-          port: ${{ secrets.VPS_PORT }} # optional; defaults to 22 if unset
-          script_stop: true # abort on first failed command
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 60s # connect timeout (default 30s) — slow Azure→MY handshakes
+          command_timeout: 15m
+          script_stop: true
           envs: CLERK_SECRET_KEY,CLERK_ISSUER
           script: |
             cd /opt/spillsnap-backend
-            # Run fresh each deploy (not from the repo's possibly-stale deploy.sh):
-            # clear the "dubious ownership" block for whichever user the CI logs in as.
             git config --global --add safe.directory /opt/spillsnap-backend || true
-            # Pull from GitHub with the deploy key kept OUTSIDE the repo dir
-            # (/root/.ssh, not the app home) so `git clean` in the working tree can
-            # never delete it. deploy.sh inherits GIT_SSH_COMMAND.
             export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /root/.ssh/vps_to_github"
-            # Refresh FIRST so a stale on-disk deploy.sh (e.g. one still pointing
-            # at the pre-rename /opt/spendsnap-backend path) is updated before we
-            # execute it. Use fetch + reset --hard (not pull) so the deploy never
-            # aborts on stray local edits to tracked files (origin/main is the
-            # source of truth; .env is untracked so it survives).
-            git fetch origin main
-            git reset --hard origin/main
-            # Remove stray untracked files under src/ ONLY (e.g. old source deleted
-            # in a refactor like Supabase→Clerk) so they aren't compiled. Scoped to
-            # src/ because the app user's home IS this repo dir, so ~/.ssh (deploy
-            # key) and ~/.pm2 are untracked at the repo root — an unscoped clean
-            # would delete them.
-            git clean -fd src/
-            # Upsert GitHub-managed secrets into the VPS .env. Robust (no sed): drop
-            # any existing KEY= line, append the new value via printf (handles URLs
-            # and special chars). NOTE the real if-block — `[ -z "$v" ] && return`
-            # would return 1 under set -e for a non-empty value and abort the deploy.
-            upsert_env() {
-              local key="$1" val="$2" file=/opt/spillsnap-backend/.env
-              if [ -z "$val" ]; then return 0; fi
-              touch "$file"
-              grep -v "^${key}=" "$file" > "$file.tmp" || true
-              printf '%s=%s\n' "$key" "$val" >> "$file.tmp"
-              mv "$file.tmp" "$file"
-              chmod 600 "$file"
-            }
-            upsert_env CLERK_SECRET_KEY "$CLERK_SECRET_KEY"
-            upsert_env CLERK_ISSUER     "$CLERK_ISSUER"
+            git fetch origin main && git reset --hard origin/main
+            ./deploy/deploy.sh
+
+      # Retry once if the first attempt failed (usually a connect timeout).
+      - name: Deploy to VPS (retry)
+        if: steps.deploy1.outcome == 'failure'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_ISSUER: ${{ secrets.CLERK_ISSUER }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 60s
+          command_timeout: 15m
+          script_stop: true
+          envs: CLERK_SECRET_KEY,CLERK_ISSUER
+          script: |
+            cd /opt/spillsnap-backend
+            git config --global --add safe.directory /opt/spillsnap-backend || true
+            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /root/.ssh/vps_to_github"
+            git fetch origin main && git reset --hard origin/main
             ./deploy/deploy.sh
