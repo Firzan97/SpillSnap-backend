@@ -47,6 +47,11 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   phone: string | null; // Malaysian +60 format
 
+  // When the one-time WhatsApp onboarding message was sent. Guards against
+  // re-sending when the user later edits their phone number.
+  @Column({ name: 'wa_onboarded_at', type: 'timestamptz', nullable: true })
+  waOnboardedAt: Date | null;
+
   @Column()
   name: string;
 

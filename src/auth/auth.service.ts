@@ -130,21 +130,22 @@ export class AuthService {
       throw e;
     }
 
-    // Genuine first-time signup → WhatsApp onboarding ping (cold → template).
-    // Fire-and-forget so a messaging hiccup never blocks sign-in.
-    void this.sendOnboarding(created);
+    // First-time signup → WhatsApp onboarding (only fires if a phone is already
+    // known, e.g. the web email-signup form; Google users add it in-app later).
+    void this.sendOnboardingIfNeeded(created);
 
     return created;
   }
 
   /**
-   * Business-initiated WhatsApp onboarding sent once, on first signup. Cold
-   * messages must be an approved template (no open 24h window yet). No-op unless
-   * the sender is configured, a template name is set, and the user gave a phone.
-   * Best-effort: never throws into the sign-in flow.
+   * Business-initiated WhatsApp onboarding, sent exactly once per user. Called
+   * on first signup (if a phone is already known) and again when the user later
+   * saves their phone number in-app. Idempotent via `waOnboardedAt`, so editing
+   * the phone afterwards never re-sends. No-op unless the sender is configured,
+   * a template name is set, and the user has a phone. Best-effort: never throws.
    */
-  private async sendOnboarding(user: User): Promise<void> {
-    // Reuse the existing welcome template (one {{1}} = first name variable).
+  async sendOnboardingIfNeeded(user: User): Promise<void> {
+    if (user.waOnboardedAt) return; // already greeted once
     const template = this.config.get<string>('WHATSAPP_WELCOME_TEMPLATE');
     const lang = this.config.get<string>('WHATSAPP_TEMPLATE_LANG') ?? 'en';
     const phone = user.phone?.replace(/\D/g, '');
@@ -152,6 +153,7 @@ export class AuthService {
     const firstName = user.name?.split(/\s+/)[0] || 'there';
     try {
       await this.whatsapp.sendTemplate(phone, template, lang, [firstName]);
+      await this.usersService.update(user.id, { waOnboardedAt: new Date() });
     } catch (e) {
       this.logger.warn(`Onboarding WhatsApp failed: ${(e as Error).message}`);
     }

@@ -13,6 +13,7 @@ import {
 } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { ReceiptsService } from '../receipts/receipts.service';
+import { AuthService } from '../auth/auth.service';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { UpdateNotificationsDto } from './dto/update-notifications.dto';
 import {
@@ -51,6 +52,7 @@ export class SettingsService {
     private readonly storage: StorageService,
     private readonly config: ConfigService,
     private readonly receiptsService: ReceiptsService,
+    private readonly auth: AuthService,
   ) {
     this.clerk = createClerkClient({
       secretKey: this.config.getOrThrow('CLERK_SECRET_KEY'),
@@ -119,6 +121,11 @@ export class SettingsService {
     // Changing the base currency re-converts every existing receipt so all
     // totals stay consistent in the new currency.
     if (baseChanged) await this.receiptsService.recomputeBaseAmounts(updated);
+
+    // Saving a phone number triggers the one-time WhatsApp onboarding (the main
+    // path for Google users, who have no phone at signup). Idempotent + best-
+    // effort, so it never blocks the settings update.
+    if (dto.phone !== undefined) void this.auth.sendOnboardingIfNeeded(updated);
 
     return this.account(updated);
   }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '../auth/auth.module';
 import { Receipt } from '../receipts/entities/receipt.entity';
 import { ReceiptsModule } from '../receipts/receipts.module';
 import { StorageService } from '../receipts/services/storage.service';
@@ -13,6 +14,7 @@ import { SettingsService } from './settings.service';
     TypeOrmModule.forFeature([Receipt, UserTag]),
     UsersModule,
     ReceiptsModule,
+    AuthModule,
   ],
   controllers: [SettingsController],
   providers: [SettingsService, StorageService],
