@@ -123,9 +123,12 @@ export class WhatsappService {
       }
       const ent = await this.entitlement.resolve(user);
       if (!ent.isPro) {
+        const firstName = user.name?.split(/\s+/)[0];
         await this.sender.sendText(
           from,
-          '📸 Sending receipts over WhatsApp is a SpillSnap Pro feature. Upgrade in the app to unlock it.',
+          `${firstName ? firstName + ', uploading' : 'Uploading'} receipts on WhatsApp is a SpillSnap Pro feature. ` +
+            'Start your 7-day free trial — no card needed — and snap unlimited receipts here:\n' +
+            'https://spillsnap.com/pricing',
         );
         return;
       }
