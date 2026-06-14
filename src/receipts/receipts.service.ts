@@ -7,7 +7,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
-import { LhdnRelief, Receipt, ReceiptStatus } from './entities/receipt.entity';
+import {
+  LhdnRelief,
+  Receipt,
+  ReceiptSource,
+  ReceiptStatus,
+} from './entities/receipt.entity';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { ListReceiptsQueryDto } from './dto/list-receipts-query.dto';
@@ -52,7 +57,10 @@ export class ReceiptsService {
   // a single extracted receipt; the first image is stored as the primary thumbnail.
   async capture(user: User, files: { buffer: Buffer; mimetype: string }[]) {
     // Extract BEFORE uploading so non-receipt images never hit storage.
-    const extracted = await this.extraction.extract(files);
+    const extracted = await this.extraction.extract(files, {
+      userId: user.id,
+      channel: ReceiptSource.APP,
+    });
 
     if (!extracted.isReceipt) {
       // The quota guard already reserved today's slot - hand it back so a
@@ -119,6 +127,7 @@ export class ReceiptsService {
       confidence: dto.confidence ?? null,
       rawText: dto.rawText ?? null,
       status: ReceiptStatus.CONFIRMED,
+      source: ReceiptSource.APP,
     });
 
     await this.applyConversion(receipt, user);
@@ -150,7 +159,10 @@ export class ReceiptsService {
         receipt: Awaited<ReturnType<ReceiptsService['toResponse']>>;
       }
   > {
-    const extracted = await this.extraction.extract(files);
+    const extracted = await this.extraction.extract(files, {
+      userId: user.id,
+      channel: ReceiptSource.WHATSAPP,
+    });
     if (!extracted.isReceipt) {
       return { isReceipt: false, reason: extracted.rejectReason };
     }
@@ -177,6 +189,7 @@ export class ReceiptsService {
       paymentMethod: extracted.paymentMethod ?? null,
       confidence: extracted.confidence ?? null,
       status: ReceiptStatus.CONFIRMED,
+      source: ReceiptSource.WHATSAPP,
     });
 
     await this.applyConversion(receipt, user);

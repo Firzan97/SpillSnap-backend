@@ -38,6 +38,12 @@ export enum ReceiptStatus {
   CONFIRMED = 'confirmed', // saved by the user
 }
 
+/** Where a receipt was captured. Drives the admin app-vs-WhatsApp split. */
+export enum ReceiptSource {
+  APP = 'app',
+  WHATSAPP = 'whatsapp',
+}
+
 export interface LineItem {
   name: string;
   qty: number;
@@ -112,6 +118,15 @@ export class Receipt {
     default: ReceiptStatus.CONFIRMED,
   })
   status: ReceiptStatus;
+
+  // Capture channel. Set to WHATSAPP on the captureAndSave (WhatsApp) path,
+  // defaults to APP for the normal in-app capture → create flow.
+  @Column({
+    type: 'enum',
+    enum: ReceiptSource,
+    default: ReceiptSource.APP,
+  })
+  source: ReceiptSource;
 
   @Column({ default: false })
   bookmarked: boolean;

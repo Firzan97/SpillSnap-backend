@@ -7,9 +7,11 @@ import {
   SubscriptionController,
 } from './billing.controller';
 import { BillingService } from './billing.service';
+import { AiUsage } from './entities/ai-usage.entity';
 import { DailyUsage } from './entities/daily-usage.entity';
 import { Subscription } from './entities/subscription.entity';
 import { SubscriptionEvent } from './entities/subscription-event.entity';
+import { AiUsageService } from './ai-usage.service';
 import { EntitlementService } from './entitlement.service';
 import { DailyQuotaGuard } from './guards/daily-quota.guard';
 import { StripeService } from './stripe.service';
@@ -18,7 +20,12 @@ import { WhatsappSenderModule } from '../whatsapp/whatsapp-sender.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Subscription, SubscriptionEvent, DailyUsage]),
+    TypeOrmModule.forFeature([
+      Subscription,
+      SubscriptionEvent,
+      DailyUsage,
+      AiUsage,
+    ]),
     UsersModule,
     WhatsappSenderModule,
   ],
@@ -31,10 +38,12 @@ import { WhatsappSenderModule } from '../whatsapp/whatsapp-sender.module';
     BillingService,
     EntitlementService,
     UsageService,
+    AiUsageService,
     StripeService,
     DailyQuotaGuard,
   ],
-  // Exported so ReceiptsModule can apply the quota guard on capture.
-  exports: [EntitlementService, UsageService, DailyQuotaGuard],
+  // Exported so ReceiptsModule can apply the quota guard on capture and record
+  // AI usage during extraction.
+  exports: [EntitlementService, UsageService, AiUsageService, DailyQuotaGuard],
 })
 export class BillingModule {}

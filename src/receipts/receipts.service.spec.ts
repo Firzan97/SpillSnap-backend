@@ -119,7 +119,10 @@ describe('ReceiptsService', () => {
       const draft = await service.capture(user(), [file]);
 
       expect(storage.uploadReceiptImage).toHaveBeenCalledWith('u1', file);
-      expect(extraction.extract).toHaveBeenCalledWith([file]);
+      expect(extraction.extract).toHaveBeenCalledWith([file], {
+        userId: 'u1',
+        channel: 'app',
+      });
       expect(repo.save).not.toHaveBeenCalled(); // draft is not persisted
       expect(draft).toMatchObject({
         imagePath: 'u1/abc.jpg',

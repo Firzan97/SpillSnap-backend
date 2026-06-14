@@ -2,9 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminModule } from './admin/admin.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
+import { AiUsage } from './billing/entities/ai-usage.entity';
 import { DailyUsage } from './billing/entities/daily-usage.entity';
 import { Subscription } from './billing/entities/subscription.entity';
 import { SubscriptionEvent } from './billing/entities/subscription-event.entity';
@@ -50,6 +52,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
           Subscription,
           SubscriptionEvent,
           DailyUsage,
+          AiUsage,
           Export,
           Notification,
           UserTag,
@@ -70,6 +73,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
 
     UsersModule,
     AuthModule,
+    AdminModule,
     DashboardModule,
     AnalyticsModule,
     LeaderboardModule,

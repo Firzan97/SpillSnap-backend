@@ -6,16 +6,33 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
+import sharp from 'sharp';
 import {
   LineItem,
   LhdnRelief,
   ReceiptCategory,
+  ReceiptSource,
 } from '../entities/receipt.entity';
+import { AiUsageService } from '../../billing/ai-usage.service';
+
+/** Who/where an extraction ran, for AI-usage attribution. */
+export interface ExtractionContext {
+  userId: string | null;
+  channel: ReceiptSource;
+}
 
 // Cheap, accurate default; escalate to Sonnet (not Opus - too pricey) when unsure.
 const FAST_MODEL = 'claude-haiku-4-5-20251001';
 const ACCURATE_MODEL = 'claude-sonnet-4-6';
 const CONFIDENCE_THRESHOLD = 70;
+
+// Receipt images are downscaled before being sent to the model. Vision token
+// cost scales with resolution, so capping the long edge + re-encoding as JPEG
+// cuts input tokens (and $) materially with no accuracy loss for receipts.
+// The full-resolution original is still what gets stored (this only shrinks
+// the model payload). 1280px keeps small text legible; q72 is a good balance.
+const MAX_EDGE_PX = 1280;
+const JPEG_QUALITY = 72;
 
 export interface ExtractedReceipt {
   isReceipt: boolean; // false when the image isn't a receipt at all
@@ -122,7 +139,10 @@ export class ReceiptExtractionService {
   private readonly logger = new Logger(ReceiptExtractionService.name);
   private readonly client: Anthropic;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly aiUsage: AiUsageService,
+  ) {
     // getOrThrow only guards `undefined` - an empty value (e.g. `ANTHROPIC_API_KEY=`
     // in .env) slips through and only surfaces later as an opaque 500 on capture.
     // Fail loudly at boot instead.
@@ -142,13 +162,22 @@ export class ReceiptExtractionService {
    */
   async extract(
     files: { buffer: Buffer; mimetype: string }[],
+    ctx: ExtractionContext = { userId: null, channel: ReceiptSource.APP },
   ): Promise<ExtractedReceipt> {
     // Timing breakdown so we can see where a slow scan spends its time:
     // payload size, the fast pass, and (if it happens) the accurate escalation.
     const totalBytes = files.reduce((s, f) => s + f.buffer.byteLength, 0);
     const t0 = Date.now();
 
-    const fast = await this.run(FAST_MODEL, files);
+    // Downscale once and reuse for both the fast pass and any escalation, so we
+    // never pay full-resolution vision tokens twice.
+    const shrunk = await this.downscaleAll(files);
+    const shrunkBytes = shrunk.reduce((s, f) => s + f.buffer.byteLength, 0);
+    this.logger.log(
+      `[scan] downscale ${(totalBytes / 1024).toFixed(0)}KB → ${(shrunkBytes / 1024).toFixed(0)}KB`,
+    );
+
+    const fast = await this.run(FAST_MODEL, shrunk, ctx);
     const tFast = Date.now() - t0;
 
     // Not a receipt - escalating for accuracy is pointless, reject straight away.
@@ -171,7 +200,7 @@ export class ReceiptExtractionService {
     );
     const tEsc = Date.now();
     try {
-      const accurate = await this.run(ACCURATE_MODEL, files);
+      const accurate = await this.run(ACCURATE_MODEL, shrunk, ctx);
       this.logger.log(
         `[scan] images=${files.length} ${(totalBytes / 1024).toFixed(0)}KB fast=${tFast}ms accurate=${Date.now() - tEsc}ms total=${Date.now() - t0}ms escalated=yes`,
       );
@@ -184,9 +213,43 @@ export class ReceiptExtractionService {
     }
   }
 
+  /**
+   * Shrink each image for the model payload: auto-rotate by EXIF, cap the long
+   * edge at MAX_EDGE_PX (never upscale), re-encode as JPEG. Cuts vision tokens.
+   * On any failure for a given file, falls back to the original buffer so a
+   * quirky image never blocks extraction.
+   */
+  private async downscaleAll(
+    files: { buffer: Buffer; mimetype: string }[],
+  ): Promise<{ buffer: Buffer; mimetype: string }[]> {
+    return Promise.all(
+      files.map(async (f) => {
+        try {
+          const buffer = await sharp(f.buffer)
+            .rotate() // honour EXIF orientation before stripping metadata
+            .resize({
+              width: MAX_EDGE_PX,
+              height: MAX_EDGE_PX,
+              fit: 'inside',
+              withoutEnlargement: true,
+            })
+            .jpeg({ quality: JPEG_QUALITY })
+            .toBuffer();
+          return { buffer, mimetype: 'image/jpeg' };
+        } catch (err) {
+          this.logger.warn(
+            `Downscale failed, using original: ${(err as Error).message}`,
+          );
+          return f;
+        }
+      }),
+    );
+  }
+
   private async run(
     model: string,
     files: { buffer: Buffer; mimetype: string }[],
+    ctx: ExtractionContext,
   ): Promise<ExtractedReceipt> {
     const imageBlocks = files.map((file) => ({
       type: 'image' as const,
@@ -242,6 +305,18 @@ export class ReceiptExtractionService {
     this.logger.log(
       `[scan] ${model} api=${Date.now() - apiStart}ms in=${u.input_tokens} out=${u.output_tokens} cacheRead=${u.cache_read_input_tokens ?? 0} cacheWrite=${u.cache_creation_input_tokens ?? 0}`,
     );
+
+    // Persist token usage + cost for the admin dashboard. Fire-and-forget;
+    // record() swallows its own errors so it never breaks extraction.
+    void this.aiUsage.record({
+      userId: ctx.userId,
+      channel: ctx.channel,
+      model,
+      inputTokens: u.input_tokens,
+      outputTokens: u.output_tokens,
+      cacheReadTokens: u.cache_read_input_tokens ?? 0,
+      cacheCreationTokens: u.cache_creation_input_tokens ?? 0,
+    });
 
     const toolUse = message.content.find(
       (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
