@@ -94,7 +94,8 @@ export const PRICING_PLANS: PricingPlan[] = [
         perMonth: 9.9,
         currency: 'MYR',
         stripePriceEnv: 'STRIPE_PRICE_PRO_ANNUAL',
-        savingsPct: 20,
+        // RM9.90/mo vs RM12.00/mo = 17.5% off → rounded for display.
+        savingsPct: 18,
       },
     ],
     features: [
