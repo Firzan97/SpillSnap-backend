@@ -104,16 +104,31 @@ export class AuthService {
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
 
-    const created = await this.usersService.create({
-      clerkId: payload.sub,
-      email,
-      name,
-      avatarUrl,
-      authProvider,
-      providerId: payload.sub,
-      phone,
-      trialEndsAt,
-    });
+    let created: User;
+    try {
+      created = await this.usersService.create({
+        clerkId: payload.sub,
+        email,
+        name,
+        avatarUrl,
+        authProvider,
+        providerId: payload.sub,
+        phone,
+        trialEndsAt,
+      });
+    } catch (e) {
+      // On first sign-in the client fires several authed requests at once
+      // (dashboard, relief, subscription). They all reach here, all see no
+      // existing row, and race to INSERT — the losers hit the unique
+      // clerkId/email constraint. That's not an error: re-read the row the
+      // winner just created and use it. Without this, the failed requests 401
+      // and the app bounces the user back to the sign-in screen.
+      const raced =
+        (await this.usersService.findByClerkId(payload.sub)) ??
+        (await this.usersService.findByEmail(email));
+      if (raced) return raced;
+      throw e;
+    }
 
     // Genuine first-time signup → WhatsApp onboarding ping (cold → template).
     // Fire-and-forget so a messaging hiccup never blocks sign-in.
