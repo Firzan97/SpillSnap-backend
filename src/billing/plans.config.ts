@@ -83,8 +83,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     prices: [
       {
         interval: BillingInterval.MONTHLY,
-        amount: 12.9,
-        perMonth: 12.9,
+        amount: 12.0,
+        perMonth: 12.0,
         currency: 'MYR',
         stripePriceEnv: 'STRIPE_PRICE_PRO_MONTHLY',
       },
