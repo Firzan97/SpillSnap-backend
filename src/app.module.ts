@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
 import { AiUsage } from './billing/entities/ai-usage.entity';
 import { DailyUsage } from './billing/entities/daily-usage.entity';
+import { AppConfig } from './config/entities/app-config.entity';
+import { AppConfigModule } from './config/app-config.module';
 import { Subscription } from './billing/entities/subscription.entity';
 import { SubscriptionEvent } from './billing/entities/subscription-event.entity';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -53,6 +55,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
           SubscriptionEvent,
           DailyUsage,
           AiUsage,
+          AppConfig,
           Export,
           Notification,
           UserTag,
@@ -71,6 +74,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
       }),
     }),
 
+    AppConfigModule,
     UsersModule,
     AuthModule,
     AdminModule,

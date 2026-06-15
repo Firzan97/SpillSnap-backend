@@ -72,9 +72,10 @@ export const PRICING_PLANS: PricingPlan[] = [
     features: [
       '1 receipt upload per day',
       'Auto-OCR & categorisation',
+      'Streaks & leaderboards',
       'Manual tags + CSV export',
     ],
-    notIncluded: ['LHDN tax tagging', 'Unlimited scans'],
+    notIncluded: ['Unlimited scans', 'Saved filters & filtered export', 'LHDN tax tagging'],
   },
   {
     id: PlanId.PRO,
@@ -101,7 +102,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     features: [
       'Unlimited scans · iOS + Android',
       'LHDN tax tagging + e-Filing export',
-      'Streaks, leaderboards & bookmarks',
+      'Saved filters & filtered export',
       'Multi-currency (RM, SGD, USD)',
       'WhatsApp receipt capture',
       '7-year encrypted cloud archive',
@@ -115,3 +116,21 @@ export const PRICING_NOTES = {
   trialDays: TRIAL_DAYS,
   note: 'Prices in MYR · Includes 8% SST · First 7 days free · Cancel anytime',
 };
+
+// ── Dynamic (admin-editable) pricing ─────────────────────────────────────────
+/** app_config key under which an admin-edited pricing payload is stored. */
+export const PRICING_CONFIG_KEY = 'pricing';
+
+/** Full payload shape served by GET /pricing/plans (and edited in admin). */
+export interface PricingPayload {
+  plans: PricingPlan[];
+  currency: string;
+  sstIncludedPct: number;
+  trialDays: number;
+  note: string;
+}
+
+/** The code default — what's served when no admin override exists. */
+export function pricingDefault(): PricingPayload {
+  return { plans: PRICING_PLANS, ...PRICING_NOTES };
+}

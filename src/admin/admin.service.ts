@@ -7,10 +7,16 @@ import {
   Subscription,
   SubscriptionStatus,
 } from '../billing/entities/subscription.entity';
-import { PRICING_PLANS } from '../billing/plans.config';
+import {
+  PRICING_PLANS,
+  PRICING_CONFIG_KEY,
+  pricingDefault,
+  type PricingPayload,
+} from '../billing/plans.config';
 import { PlanId } from '../billing/entities/subscription.entity';
 import { Receipt } from '../receipts/entities/receipt.entity';
 import { User, UserRole } from '../users/entities/user.entity';
+import { AppConfigService } from '../config/app-config.service';
 
 /** A row in the users list page. */
 export interface UserRow {
@@ -71,19 +77,81 @@ export class AdminService {
     @InjectRepository(Subscription)
     private readonly subs: Repository<Subscription>,
     @InjectRepository(AiUsage) private readonly aiUsage: Repository<AiUsage>,
+    private readonly appConfig: AppConfigService,
   ) {}
+
+  // ── Pricing (admin-editable) ────────────────────────────────────────────────
+  /** Effective pricing + the code default + whether an override is active. */
+  async getPricing(): Promise<{
+    effective: PricingPayload;
+    default: PricingPayload;
+    overridden: boolean;
+  }> {
+    const def = pricingDefault();
+    const [effective, overridden] = await Promise.all([
+      this.appConfig.get<PricingPayload>(PRICING_CONFIG_KEY, def),
+      this.appConfig.isOverridden(PRICING_CONFIG_KEY),
+    ]);
+    return { effective, default: def, overridden };
+  }
+
+  /** Validate + persist an admin-edited pricing payload. */
+  async setPricing(payload: PricingPayload): Promise<PricingPayload> {
+    this.validatePricing(payload);
+    return this.appConfig.set<PricingPayload>(PRICING_CONFIG_KEY, payload);
+  }
+
+  /** Drop the override → revert to the shipped default. */
+  async resetPricing(): Promise<PricingPayload> {
+    await this.appConfig.reset(PRICING_CONFIG_KEY);
+    return pricingDefault();
+  }
+
+  private validatePricing(p: unknown): asserts p is PricingPayload {
+    const obj = p as Partial<PricingPayload>;
+    if (!obj || !Array.isArray(obj.plans) || obj.plans.length === 0) {
+      throw new Error('pricing.plans must be a non-empty array');
+    }
+    for (const plan of obj.plans) {
+      if (!plan?.id || !plan?.name || !Array.isArray(plan?.prices)) {
+        throw new Error('each plan needs id, name and a prices array');
+      }
+      for (const pr of plan.prices) {
+        if (
+          typeof pr?.amount !== 'number' ||
+          typeof pr?.perMonth !== 'number' ||
+          !pr?.interval
+        ) {
+          throw new Error(
+            `plan "${plan.id}" has a price missing interval/amount/perMonth`,
+          );
+        }
+      }
+    }
+    if (typeof obj.currency !== 'string' || typeof obj.note !== 'string') {
+      throw new Error('pricing needs currency + note strings');
+    }
+  }
 
   /** Single payload backing the whole admin dashboard. */
   async metrics() {
-    const [users, subscriptions, receipts, tokens, engagement, revenue] =
-      await Promise.all([
-        this.userMetrics(),
-        this.subscriptionMetrics(),
-        this.receiptMetrics(),
-        this.tokenMetrics(),
-        this.engagementMetrics(),
-        this.revenueMetrics(),
-      ]);
+    const [
+      users,
+      subscriptions,
+      receipts,
+      tokens,
+      engagement,
+      revenue,
+      analytics,
+    ] = await Promise.all([
+      this.userMetrics(),
+      this.subscriptionMetrics(),
+      this.receiptMetrics(),
+      this.tokenMetrics(),
+      this.engagementMetrics(),
+      this.revenueMetrics(),
+      this.analyticsMetrics(),
+    ]);
 
     return {
       generatedAt: new Date().toISOString(),
@@ -91,6 +159,7 @@ export class AdminService {
       subscriptions,
       receipts,
       tokens,
+      analytics,
       engagement,
       revenue,
     };
@@ -293,6 +362,84 @@ export class AdminService {
       arr: Number(arr.toFixed(2)),
       arpu: Number(arpu.toFixed(2)),
       payingUsers,
+    };
+  }
+
+  // ── Analytics ─────────────────────────────────────────────────────────────
+  /**
+   * Receipt-activity analytics. Days are bucketed in Asia/Kuala_Lumpur (the
+   * app's timezone) so "today" and per-day numbers match what users see.
+   */
+  private async analyticsMetrics() {
+    const TZ = 'Asia/Kuala_Lumpur';
+    const klDate = `(created_at AT TIME ZONE '${TZ}')::date`;
+
+    const total = await this.receipts.count();
+
+    // distinct active days + distinct users with receipts
+    const aggRow = await this.receipts.query(
+      `SELECT COUNT(DISTINCT ${klDate})::int AS days,
+              COUNT(DISTINCT user_id)::int AS users
+       FROM receipts`,
+    );
+    const activeDays = toInt(aggRow?.[0]?.days);
+    const usersWithReceipts = toInt(aggRow?.[0]?.users);
+
+    // per-day counts → highest / lowest active day
+    const perDay = await this.receipts.query(
+      `SELECT to_char(${klDate}, 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
+       FROM receipts GROUP BY 1 ORDER BY count DESC`,
+    );
+    const rows = perDay as { day: string; count: number }[];
+    const highestDay = rows[0] ?? null;
+    const lowestDay = rows.length ? rows[rows.length - 1] : null;
+
+    // most visited place (non-empty location mode)
+    const placeRow = await this.receipts.query(
+      `SELECT location AS label, COUNT(*)::int AS value
+       FROM receipts WHERE location IS NOT NULL AND location <> ''
+       GROUP BY location ORDER BY value DESC LIMIT 1`,
+    );
+    const mostVisitedPlace = placeRow?.[0]
+      ? { label: placeRow[0].label as string, value: toInt(placeRow[0].value) }
+      : null;
+
+    // peak weekday (0=Sun … 6=Sat in KL)
+    const dowRow = await this.receipts.query(
+      `SELECT EXTRACT(DOW FROM (created_at AT TIME ZONE '${TZ}'))::int AS dow,
+              COUNT(*)::int AS value
+       FROM receipts GROUP BY 1 ORDER BY value DESC LIMIT 1`,
+    );
+    const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const peakWeekday = dowRow?.[0]
+      ? { label: DOW[toInt(dowRow[0].dow)] ?? '—', value: toInt(dowRow[0].value) }
+      : null;
+
+    // active today (KL) vs not
+    const activeRow = await this.receipts.query(
+      `SELECT COUNT(DISTINCT user_id)::int AS value FROM receipts
+       WHERE ${klDate} = (now() AT TIME ZONE '${TZ}')::date`,
+    );
+    const activeToday = toInt(activeRow?.[0]?.value);
+    const totalUsers = await this.users.count();
+    const inactiveToday = Math.max(0, totalUsers - activeToday);
+
+    const round1 = (n: number) => Number(n.toFixed(1));
+    return {
+      totalReceipts: total,
+      activeDays,
+      avgPerDay: activeDays ? round1(total / activeDays) : 0,
+      avgPerUser: usersWithReceipts ? round1(total / usersWithReceipts) : 0,
+      avgPerDayPerUser:
+        activeDays && usersWithReceipts
+          ? round1(total / (activeDays * usersWithReceipts))
+          : 0,
+      highestDay,
+      lowestDay,
+      mostVisitedPlace,
+      peakWeekday,
+      activeToday,
+      inactiveToday,
     };
   }
 

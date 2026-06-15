@@ -4,9 +4,11 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
+import type { PricingPayload } from '../billing/plans.config';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -62,5 +64,30 @@ export class AdminController {
       );
     }
     return this.adminService.reset();
+  }
+
+  // ── Pricing (admin-editable) ────────────────────────────────────────────────
+  @Get('pricing')
+  @ApiOperation({ summary: 'Get effective pricing + default + override flag' })
+  getPricing() {
+    return this.adminService.getPricing();
+  }
+
+  @Put('pricing')
+  @ApiOperation({ summary: 'Save an admin-edited pricing payload' })
+  @ApiResponse({ status: 200, description: 'Saved pricing' })
+  @ApiResponse({ status: 400, description: 'Invalid pricing payload' })
+  async setPricing(@Body() payload: PricingPayload) {
+    try {
+      return await this.adminService.setPricing(payload);
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+  }
+
+  @Post('pricing/reset')
+  @ApiOperation({ summary: 'Revert pricing to the shipped default' })
+  resetPricing() {
+    return this.adminService.resetPricing();
   }
 }

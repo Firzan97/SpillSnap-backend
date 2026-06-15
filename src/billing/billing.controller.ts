@@ -23,20 +23,27 @@ import { User } from '../users/entities/user.entity';
 import { BillingService } from './billing.service';
 import { CheckoutDto } from './dto/checkout.dto';
 import { EntitlementService } from './entitlement.service';
-import { PRICING_NOTES, PRICING_PLANS } from './plans.config';
+import { AppConfigService } from '../config/app-config.service';
+import {
+  PRICING_CONFIG_KEY,
+  pricingDefault,
+  type PricingPayload,
+} from './plans.config';
 
 @ApiTags('pricing')
 @Controller('pricing')
 export class PricingController {
+  constructor(private readonly appConfig: AppConfigService) {}
+
   @Get('plans')
   @ApiOperation({
     summary: 'Public plan catalog',
     description:
-      'Free + Pro plans with MYR (SST-inclusive) prices and feature lists. Drives the Pricing page.',
+      'Free + Pro plans with MYR (SST-inclusive) prices and feature lists. Drives the Pricing page. Admin-editable (falls back to the code default).',
   })
   @ApiResponse({ status: 200, description: 'Plan catalog' })
-  getPlans() {
-    return { plans: PRICING_PLANS, ...PRICING_NOTES };
+  getPlans(): Promise<PricingPayload> {
+    return this.appConfig.get<PricingPayload>(PRICING_CONFIG_KEY, pricingDefault());
   }
 }
 
