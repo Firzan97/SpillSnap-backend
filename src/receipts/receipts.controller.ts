@@ -68,9 +68,17 @@ export class ReceiptsController {
     summary:
       'Capture: upload receipt photo(s), extract fields, return an unsaved draft',
     description:
-      'Stores the image(s) and runs OCR/vision extraction. Pass multiple images for a long receipt photographed in sections - they are merged into one receipt. Returns the extracted draft plus an imagePath to echo back when saving. Does NOT persist a receipt.',
+      'Stores the image(s) and runs OCR/vision extraction. Pass multiple images for a long receipt photographed in sections - they are merged into one receipt. Returns the extracted draft plus an imagePath to echo back when saving. Does NOT persist a receipt.\n\n' +
+      'The draft also includes detection flags the client should act on:\n' +
+      '- `complete` (boolean): false when the capture looks cut off (no grand total visible).\n' +
+      '- `multipleReceipts` (boolean): true when the photo(s) contain 2+ distinct receipts.\n' +
+      '- `warning` (string|null): a ready-to-show prompt when `complete=false` or `multipleReceipts=true` (e.g. "are you sure this is the whole receipt?"). Non-blocking — the draft is returned regardless.',
   })
-  @ApiResponse({ status: 200, description: 'Extracted draft' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Extracted draft (incl. complete / multipleReceipts / warning flags)',
+  })
   @ApiResponse({ status: 400, description: 'Missing or invalid image file(s)' })
   @ApiResponse({
     status: 401,

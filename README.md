@@ -2,7 +2,7 @@
 
 API for **SpillSnap** — receipt scanning, LHDN tax tagging, and spend analytics for Malaysia. Built with [NestJS 11](https://nestjs.com/) + TypeScript, PostgreSQL (Supabase), and Claude vision for OCR.
 
-Powers the SpillSnap mobile app (Expo) and the marketing/landing web app (Nuxt). Authentication is owned by **Supabase Auth** — this backend only verifies the access token Supabase issues and syncs the user.
+Powers the SpillSnap mobile app (Expo) and the marketing/landing web app (Nuxt). Authentication is owned by **Clerk** — this backend only verifies the Clerk session token and mirrors the user into its local `users` table.
 
 ## Stack
 
@@ -11,8 +11,8 @@ Powers the SpillSnap mobile app (Expo) and the marketing/landing web app (Nuxt).
 | Framework      | NestJS 11 (Express platform) |
 | Language       | TypeScript 5.7 |
 | Database       | PostgreSQL via TypeORM 0.3 (Supabase-hosted) |
-| Auth           | Supabase Auth (login/SSO) + `passport-jwt` token verification |
-| Receipt OCR    | Claude vision (`@anthropic-ai/sdk`) |
+| Auth           | Clerk (login/SSO) + Clerk session-token verification (`passport` strategy) |
+| Receipt OCR    | Claude vision (`@anthropic-ai/sdk`) — Haiku, escalating to Sonnet when unsure |
 | Billing        | Stripe (web-sold Pro subscription, auto-renewing) |
 | File storage   | Supabase Storage (private `receipts` bucket, public `avatars` bucket) |
 | Push           | Expo Server SDK |
@@ -24,8 +24,9 @@ Powers the SpillSnap mobile app (Expo) and the marketing/landing web app (Nuxt).
 
 The app is organized into feature modules under `src/`:
 
-- **auth** — verify Supabase token, sync user (Supabase owns login/SSO)
-- **receipts** — capture (Claude OCR extract), save, list, edit, delete
+- **auth** — verify Clerk session token, mirror/sync user (Clerk owns login/SSO); fires a one-time WhatsApp onboarding ping on first signup / first phone save
+- **receipts** — capture (Claude OCR extract), save, list, edit, delete; detects **incomplete** captures (cut-off receipts) and **multiple distinct receipts**, surfaced as `complete` / `multipleReceipts` + a `warning` prompt
+- **analytics** — spend analytics endpoints (trends, breakdowns)
 - **dashboard** — home dashboard aggregation
 - **tax** — LHDN relief tagging, manual reliefs, YA relief rules
 - **export** — CSV export for LHDN e-Filing
@@ -37,15 +38,17 @@ The app is organized into feature modules under `src/`:
 - **currency** — multi-currency support (Pro)
 - **feedback** — testimonials store
 - **public-stats** — unauthenticated landing-page stats + approved testimonials (server-cached hourly)
-- **whatsapp** — Pro receipt upload via WhatsApp (Meta Cloud API)
+- **whatsapp** — Pro receipt upload via WhatsApp (Meta Cloud API); auto-detects incomplete captures (asks for the rest) and multiple receipts (asks to send one at a time)
 
 ## Prerequisites
 
 - **Node.js 20+** (production runs on Node 20)
 - **PostgreSQL** — a Supabase project (or local Postgres)
-- **Supabase** project (Auth + Storage)
+- **Clerk** application (auth) — provides `CLERK_SECRET_KEY` + issuer
+- **Supabase** project (Storage; DB hosting)
 - **Anthropic API key** (receipt OCR)
 - **Stripe** account (billing) — optional for local dev
+- **Meta WhatsApp** app (optional) — Pro WhatsApp upload
 
 ## Setup
 
@@ -70,12 +73,12 @@ Swagger docs (non-production only): **`http://localhost:3000/docs`**
 All variables are documented in [`.env.example`](.env.example). Key groups:
 
 - **Database** — `DATABASE_URL` or discrete `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASS`/`DB_NAME`
-- **Supabase Auth** — `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (Google/Apple SSO is configured in the Supabase dashboard, not here)
-- **Storage** — `STORAGE_BUCKET` (private receipts), `AVATAR_BUCKET` (public avatars)
+- **Auth (Clerk)** — `CLERK_SECRET_KEY`, `CLERK_ISSUER` (Google SSO etc. configured in the Clerk dashboard, not here). App boots crash if these are missing in production.
+- **Storage (Supabase)** — `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STORAGE_BUCKET` (private receipts), `AVATAR_BUCKET` (public avatars)
 - **Receipt OCR** — `ANTHROPIC_API_KEY`
 - **Billing** — `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL`
 - **App** — `PORT`, `NODE_ENV`, `FRONTEND_URL` (comma-separated list for CORS / Stripe redirect URLs)
-- **WhatsApp** — `WHATSAPP_*` (inert until phone-number ID + access token are set)
+- **WhatsApp** — `WHATSAPP_*` (inert until phone-number ID + access token are set); `WHATSAPP_WELCOME_TEMPLATE` is reused for both the Pro-welcome and the first-signup onboarding ping
 
 > `.env` is gitignored — never commit it. Only `.env.example` is tracked.
 
@@ -100,6 +103,12 @@ Schema is managed by TypeORM. `synchronize` is **on in dev, off in production** 
 - `002-receipt-image-paths.sql`
 - `003-lhdn-relief-add-childcare-education.sql`
 - `004-receipt-relief-provenance.sql`
+- `005-supabase-id-to-clerk-id.sql` — rename `supabase_id` → `clerk_id` (varchar) for the Clerk migration
+- `006-receipts-user-fk-cascade.sql` — convert `receipts.user_id` to uuid + add `ON DELETE CASCADE`
+- `007-users-country.sql` — add `users.country` (drives the Malaysia leaderboard scope)
+- `008-users-wa-onboarded-at.sql` — add `users.wa_onboarded_at` (one-time WhatsApp onboarding flag)
+
+> ⚠️ Apply migrations **before** deploying code that depends on the new schema — prod runs with `synchronize` off, so the app will error on a missing column otherwise.
 
 ## Production notes
 

@@ -17,7 +17,10 @@ import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { ListReceiptsQueryDto } from './dto/list-receipts-query.dto';
 import { StorageService } from './services/storage.service';
-import { ReceiptExtractionService } from './services/receipt-extraction.service';
+import {
+  ExtractedReceipt,
+  ReceiptExtractionService,
+} from './services/receipt-extraction.service';
 import { UsageService } from '../billing/usage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CurrencyService } from '../currency/currency.service';
@@ -101,7 +104,26 @@ export class ReceiptsService {
       location: extracted.location,
       paymentMethod: extracted.paymentMethod,
       confidence: extracted.confidence,
+      // Detection flags + a ready-to-show prompt. Non-blocking: the draft is
+      // returned either way; the client decides whether to warn the user.
+      complete: extracted.complete,
+      multipleReceipts: extracted.multipleReceipts,
+      warning: this.captureWarning(extracted),
     };
+  }
+
+  /**
+   * User-facing prompt when a capture looks off, or null when it's clean.
+   * multipleReceipts takes priority over an incomplete capture.
+   */
+  private captureWarning(extracted: ExtractedReceipt): string | null {
+    if (extracted.multipleReceipts) {
+      return "Looks like there's more than one receipt here. For the most accurate result, capture one receipt at a time.";
+    }
+    if (!extracted.complete) {
+      return "This looks like it might be only part of the receipt — we couldn't see the final total. If it's a long receipt, add the missing sections so the amounts are right.";
+    }
+    return null;
   }
 
   // ── Create: persist a confirmed receipt + bump streak ────────────────────────
@@ -146,27 +168,28 @@ export class ReceiptsService {
     return this.toResponse(saved);
   }
 
-  // ── Capture + save in one shot (no manual confirm step) ──────────────────────
-  // Used by ingestion channels like WhatsApp where the user can't edit a draft.
-  // Extracts, and only persists if the image(s) actually form a receipt.
-  async captureAndSave(
+  // ── Ingestion (WhatsApp) helpers ─────────────────────────────────────────────
+  // Split into analyze (extract only, no storage) + saveExtracted (persist a
+  // pre-extracted result) so a channel can inspect the detection flags
+  // (multipleReceipts / complete) and decide whether to prompt BEFORE saving -
+  // without paying for the model call twice.
+
+  /** Extract from image(s) without uploading or persisting anything. */
+  async analyze(
     user: User,
     files: { buffer: Buffer; mimetype: string }[],
-  ): Promise<
-    | { isReceipt: false; reason: string | null }
-    | {
-        isReceipt: true;
-        receipt: Awaited<ReturnType<ReceiptsService['toResponse']>>;
-      }
-  > {
-    const extracted = await this.extraction.extract(files, {
-      userId: user.id,
-      channel: ReceiptSource.WHATSAPP,
-    });
-    if (!extracted.isReceipt) {
-      return { isReceipt: false, reason: extracted.rejectReason };
-    }
+    channel: ReceiptSource = ReceiptSource.WHATSAPP,
+  ): Promise<ExtractedReceipt> {
+    return this.extraction.extract(files, { userId: user.id, channel });
+  }
 
+  /** Upload + persist a confirmed receipt from an already-extracted result. */
+  async saveExtracted(
+    user: User,
+    files: { buffer: Buffer; mimetype: string }[],
+    extracted: ExtractedReceipt,
+    source: ReceiptSource = ReceiptSource.WHATSAPP,
+  ): Promise<Awaited<ReturnType<ReceiptsService['toResponse']>>> {
     const paths = await Promise.all(
       files.map((f) => this.storage.uploadReceiptImage(user.id, f)),
     );
@@ -189,7 +212,7 @@ export class ReceiptsService {
       paymentMethod: extracted.paymentMethod ?? null,
       confidence: extracted.confidence ?? null,
       status: ReceiptStatus.CONFIRMED,
-      source: ReceiptSource.WHATSAPP,
+      source,
     });
 
     await this.applyConversion(receipt, user);
@@ -200,10 +223,10 @@ export class ReceiptsService {
       emoji: '📸',
       title: 'Receipt saved',
       body: `${saved.merchant} · ${saved.currency} ${Number(saved.amount).toFixed(2)}`,
-      data: { receiptId: saved.id, source: 'whatsapp' },
+      data: { receiptId: saved.id, source },
     });
 
-    return { isReceipt: true, receipt: await this.toResponse(saved) };
+    return this.toResponse(saved);
   }
 
   // ── Streak summary: current/longest + last-7-days snap activity ──────────────

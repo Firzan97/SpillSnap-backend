@@ -50,6 +50,8 @@ export interface ExtractedReceipt {
   suggestedRelief: LhdnRelief;
   taxEligible: boolean;
   confidence: number; // 0-100
+  complete: boolean; // false when the receipt looks cut off / only partially captured
+  multipleReceipts: boolean; // true when the image(s) hold 2+ distinct receipts
 }
 
 const SYSTEM_PROMPT = `You are a receipt-extraction engine for SpillSnap, a Malaysian expense + tax app.
@@ -73,7 +75,16 @@ Rules:
   gym/internet/phone/electronics -> lifestyle; clinic/pharmacy/medical -> medical; EV charging -> ev_charging;
   breastfeeding equipment -> breastfeeding; childcare centre/kindergarten/nursery fees -> childcare;
   self education/tuition/course fees (recognised study) -> education. Anything else -> none / taxEligible false.
-- confidence: 0-100, how sure you are about the total + merchant. Be honest; low for blurry/partial receipts.`;
+- confidence: 0-100, how sure you are about the total + merchant. Be honest; low for blurry/partial receipts.
+- complete: TRUE if the image (or, for multiple images, the set together) shows the WHOLE receipt end-to-end,
+  including the grand total / payment line / footer. Set FALSE when it looks cut off or partial - line items
+  end abruptly with no grand total visible, or the top/bottom is clearly missing (a long receipt photographed
+  only halfway). When in doubt and no grand total is visible, set complete=false.
+- multipleReceipts: TRUE only if the image(s) clearly contain TWO OR MORE DIFFERENT receipts (different
+  merchants or separate transactions). IMPORTANT: when several images are sent they are normally sequential
+  sections of ONE long receipt - keep multipleReceipts=false for those. Set it true only for genuinely
+  distinct, separate receipts (e.g. two unrelated receipts in one photo, or each photo a different shop). When
+  multipleReceipts=true, still extract the FIRST/primary receipt into the other fields.`;
 
 const EXTRACTION_TOOL: Anthropic.Tool = {
   name: 'save_receipt',
@@ -122,6 +133,16 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
       suggestedRelief: { type: 'string', enum: Object.values(LhdnRelief) },
       taxEligible: { type: 'boolean' },
       confidence: { type: 'number', minimum: 0, maximum: 100 },
+      complete: {
+        type: 'boolean',
+        description:
+          'True if the whole receipt (incl. grand total/footer) is captured; false if cut off/partial',
+      },
+      multipleReceipts: {
+        type: 'boolean',
+        description:
+          'True if the image(s) contain 2+ distinct receipts (not sections of one long receipt)',
+      },
     },
     required: [
       'isReceipt',
@@ -364,6 +385,10 @@ export class ReceiptExtractionService {
         (str(raw.suggestedRelief) as LhdnRelief) ?? LhdnRelief.NONE,
       taxEligible: raw.taxEligible === true,
       confidence: num(raw.confidence) ?? 0,
+      // Default complete=true (only an explicit false flags a partial capture);
+      // multipleReceipts=false unless the model explicitly flags distinct receipts.
+      complete: raw.complete !== false,
+      multipleReceipts: raw.multipleReceipts === true,
     };
   }
 

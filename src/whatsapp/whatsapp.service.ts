@@ -26,6 +26,9 @@ interface PendingBatch {
   userId: string;
   files: { buffer: Buffer; mimetype: string }[];
   timer: NodeJS.Timeout;
+  // Set once we've told the user the capture looked incomplete. A second DONE
+  // then saves it as-is, so they're never trapped if the model is over-cautious.
+  warnedIncomplete?: boolean;
 }
 
 /** Minimal shapes of the Meta webhook payload we read. */
@@ -193,32 +196,70 @@ export class WhatsappService {
     const batch = this.pending.get(from);
     if (!batch) return;
     clearTimeout(batch.timer);
-    this.pending.delete(from);
 
-    if (batch.files.length === 0) return;
+    if (batch.files.length === 0) {
+      this.pending.delete(from);
+      return;
+    }
 
     const user = await this.users.findById(batch.userId).catch(() => null);
-    if (!user) return;
+    if (!user) {
+      this.pending.delete(from);
+      return;
+    }
 
     await this.sender.sendText(from, '⏳ Reading your receipt…');
     try {
-      const result = await this.receipts.captureAndSave(user, batch.files);
-      if (!result.isReceipt) {
+      // Analyze first (no save) so we can act on the detection flags.
+      const extracted = await this.receipts.analyze(user, batch.files);
+
+      if (!extracted.isReceipt) {
+        this.pending.delete(from);
         await this.sender.sendText(
           from,
-          `⚠️ ${result.reason ?? "That doesn't look like a receipt."} Please resend a clear photo.`,
+          `⚠️ ${extracted.rejectReason ?? "That doesn't look like a receipt."} Please resend a clear photo.`,
         );
         return;
       }
-      const r = result.receipt;
+
+      // Two (or more) different receipts in the batch → don't merge them into
+      // one. Ask the user to send them separately.
+      if (extracted.multipleReceipts) {
+        this.pending.delete(from);
+        await this.sender.sendText(
+          from,
+          '🧾 Looks like more than one receipt here. Please send one receipt at a time — snap each receipt on its own, then reply *DONE*.',
+        );
+        return;
+      }
+
+      // Looks cut off and we haven't warned yet → keep the batch open, ask for
+      // the rest. A second DONE (or the idle timer) saves it as-is so the user
+      // is never stuck if the model is over-cautious.
+      if (!extracted.complete && !batch.warnedIncomplete) {
+        batch.warnedIncomplete = true;
+        batch.timer = this.armTimer(from);
+        this.pending.set(from, batch);
+        await this.sender.sendText(
+          from,
+          '🤔 Are you sure this is the whole receipt? It looks like part of it might be missing — I couldn’t see the final total.\n\n📎 If it’s a long receipt, send the remaining section(s) now, then reply *DONE*. Or reply *DONE* again to save it as-is.',
+        );
+        return;
+      }
+
+      // Save (complete, or the user confirmed an incomplete one).
+      this.pending.delete(from);
+      const r = await this.receipts.saveExtracted(user, batch.files, extracted);
+      const note = extracted.complete
+        ? ''
+        : '\n(Saved as-is — double-check the total in the app.)';
       await this.sender.sendText(
         from,
-        `✅ Saved! *${r.merchant}* - ${r.currency} ${Number(r.amount).toFixed(2)}\nView it in the SpillSnap app.`,
+        `✅ Saved! *${r.merchant}* - ${r.currency} ${Number(r.amount).toFixed(2)}${note}\nView it in the SpillSnap app.`,
       );
     } catch (e) {
-      this.logger.error(
-        `finalize/captureAndSave failed: ${(e as Error).message}`,
-      );
+      this.pending.delete(from);
+      this.logger.error(`finalize failed: ${(e as Error).message}`);
       await this.sender.sendText(
         from,
         '😕 Something went wrong saving that. Please try again.',
