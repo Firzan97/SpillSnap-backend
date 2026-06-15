@@ -159,6 +159,9 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
 export class ReceiptExtractionService {
   private readonly logger = new Logger(ReceiptExtractionService.name);
   private readonly client: Anthropic;
+  // Tunable without a redeploy. Smaller edge = fewer vision tokens = faster/cheaper.
+  private readonly maxEdgePx: number;
+  private readonly confidenceThreshold: number;
 
   constructor(
     config: ConfigService,
@@ -174,6 +177,10 @@ export class ReceiptExtractionService {
       );
     }
     this.client = new Anthropic({ apiKey });
+    this.maxEdgePx =
+      config.get<number>('RECEIPT_MAX_EDGE_PX') ?? MAX_EDGE_PX;
+    this.confidenceThreshold =
+      config.get<number>('RECEIPT_CONFIDENCE_THRESHOLD') ?? CONFIDENCE_THRESHOLD;
   }
 
   /**
@@ -208,16 +215,22 @@ export class ReceiptExtractionService {
       );
       return fast;
     }
-    if (fast.confidence >= CONFIDENCE_THRESHOLD) {
+
+    // The app shows an editable draft, so the user reviews/fixes low-confidence
+    // fields - no need to pay the ~2x latency of the accurate pass there. Auto-
+    // saved channels (WhatsApp) have no review step, so they still escalate.
+    const allowEscalation = ctx.channel !== ReceiptSource.APP;
+
+    if (fast.confidence >= this.confidenceThreshold || !allowEscalation) {
       this.logger.log(
-        `[scan] images=${files.length} ${(totalBytes / 1024).toFixed(0)}KB fast=${tFast}ms conf=${fast.confidence} escalated=no`,
+        `[scan] images=${files.length} ${(totalBytes / 1024).toFixed(0)}KB fast=${tFast}ms conf=${fast.confidence} escalated=${allowEscalation ? 'no' : 'skipped-app'}`,
       );
       return fast;
     }
 
     // Low confidence - retry once on the stronger model.
     this.logger.log(
-      `Confidence ${fast.confidence} < ${CONFIDENCE_THRESHOLD}; escalating to ${ACCURATE_MODEL}`,
+      `Confidence ${fast.confidence} < ${this.confidenceThreshold}; escalating to ${ACCURATE_MODEL}`,
     );
     const tEsc = Date.now();
     try {
@@ -249,8 +262,8 @@ export class ReceiptExtractionService {
           const buffer = await sharp(f.buffer)
             .rotate() // honour EXIF orientation before stripping metadata
             .resize({
-              width: MAX_EDGE_PX,
-              height: MAX_EDGE_PX,
+              width: this.maxEdgePx,
+              height: this.maxEdgePx,
               fit: 'inside',
               withoutEnlargement: true,
             })

@@ -59,16 +59,33 @@ export class ReceiptsService {
   // Accepts one or more images (sections of a long receipt). They're merged into
   // a single extracted receipt; the first image is stored as the primary thumbnail.
   async capture(user: User, files: { buffer: Buffer; mimetype: string }[]) {
-    // Extract BEFORE uploading so non-receipt images never hit storage.
-    const extracted = await this.extraction.extract(files, {
-      userId: user.id,
-      channel: ReceiptSource.APP,
-    });
+    // Run extraction and image upload CONCURRENTLY to keep the critical path
+    // short (extraction is ~2.5s; uploading in parallel hides the storage time).
+    // Non-receipts are cleaned up below, so they never linger in storage.
+    const uploadPromise = Promise.all(
+      files.map((f) => this.storage.uploadReceiptImage(user.id, f)),
+    );
+    // Pre-attach a catch so a rejected upload (when we don't await it) never
+    // surfaces as an unhandledRejection while extraction is still running.
+    uploadPromise.catch(() => undefined);
+
+    let extracted: ExtractedReceipt;
+    try {
+      extracted = await this.extraction.extract(files, {
+        userId: user.id,
+        channel: ReceiptSource.APP,
+      });
+    } catch (err) {
+      // Extraction failed - bin anything that finished uploading, then rethrow.
+      await this.cleanupUploads(uploadPromise);
+      throw err;
+    }
 
     if (!extracted.isReceipt) {
       // The quota guard already reserved today's slot - hand it back so a
       // mistaken upload doesn't burn a Free user's 1/day allowance.
       await this.usage.refund(user.id);
+      await this.cleanupUploads(uploadPromise);
       throw new UnprocessableEntityException({
         error: 'NOT_A_RECEIPT',
         message:
@@ -77,10 +94,8 @@ export class ReceiptsService {
       });
     }
 
-    // Store every section so nothing is lost; the first is the primary image.
-    const paths = await Promise.all(
-      files.map((f) => this.storage.uploadReceiptImage(user.id, f)),
-    );
+    // Valid receipt - the parallel upload is (or is about to be) done.
+    const paths = await uploadPromise;
     const imagePath = paths[0];
 
     return {
@@ -124,6 +139,21 @@ export class ReceiptsService {
       return "This looks like it might be only part of the receipt — we couldn't see the final total. If it's a long receipt, add the missing sections so the amounts are right.";
     }
     return null;
+  }
+
+  /**
+   * Best-effort removal of images that were uploaded in parallel with extraction
+   * but won't be kept (extraction failed or the image wasn't a receipt).
+   */
+  private async cleanupUploads(
+    uploadPromise: Promise<string[]>,
+  ): Promise<void> {
+    try {
+      const paths = await uploadPromise;
+      if (paths.length) await this.storage.removeMany(paths);
+    } catch {
+      // The upload itself failed - nothing landed in storage to clean up.
+    }
   }
 
   // ── Create: persist a confirmed receipt + bump streak ────────────────────────
