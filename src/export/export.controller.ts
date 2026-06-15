@@ -17,6 +17,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
+import { EntitlementService } from '../billing/entitlement.service';
+import { assertPro } from '../billing/require-pro';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { CreateExportDto } from './dto/create-export.dto';
@@ -28,7 +30,10 @@ import { ExportService } from './export.service';
 @UseGuards(ClerkAuthGuard)
 @Controller('export')
 export class ExportController {
-  constructor(private readonly exportService: ExportService) {}
+  constructor(
+    private readonly exportService: ExportService,
+    private readonly entitlements: EntitlementService,
+  ) {}
 
   // GET /export/summary
   @Get('summary')
@@ -63,7 +68,12 @@ export class ExportController {
   })
   @ApiResponse({ status: 201, description: 'Export content (base64)' })
   @ApiResponse({ status: 501, description: 'PDF not yet implemented' })
-  create(@CurrentUser() user: User, @Body() dto: CreateExportDto) {
+  async create(@CurrentUser() user: User, @Body() dto: CreateExportDto) {
+    // Plain (full / date-range) CSV export stays free. Narrowing by category or
+    // tag — i.e. exporting a saved filter/bookmark — is Pro-only.
+    if (dto.categories?.length || dto.tags?.length) {
+      assertPro(await this.entitlements.resolve(user), 'Filtered export');
+    }
     return this.exportService.create(user, dto);
   }
 

@@ -10,7 +10,7 @@ import { Repository } from 'typeorm';
 import Stripe from 'stripe';
 import { User, UserRole } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
-import { CheckoutDto } from './dto/checkout.dto';
+import { CheckoutDto, CheckoutPlatform } from './dto/checkout.dto';
 import {
   PlanId,
   Subscription,
@@ -51,6 +51,39 @@ export class BillingService {
     return this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:8081';
   }
 
+  /**
+   * Public website origin that hosts the Stripe success/cancel pages. Stripe
+   * only accepts http(s) redirect URLs (never custom schemes like spillsnap://),
+   * so the mobile flow lands on these web pages, which then deep-link back into
+   * the app. Falls back to FRONTEND_URL for local/dev.
+   */
+  private webUrl(): string {
+    return (
+      this.config.get<string>('WEB_URL') ??
+      this.config.get<string>('FRONTEND_URL') ??
+      'https://spillsnap.com'
+    );
+  }
+
+  /**
+   * Build the Stripe return URLs. Mobile platforms get `?app=1` so the web
+   * success/cancel page bounces back into the app via the spillsnap:// scheme;
+   * web checkout stays on the website.
+   */
+  private billingReturnUrls(platform?: CheckoutPlatform): {
+    successUrl: string;
+    cancelUrl: string;
+  } {
+    const base = this.webUrl();
+    const isMobile =
+      platform === CheckoutPlatform.IOS || platform === CheckoutPlatform.ANDROID;
+    const q = isMobile ? '?app=1' : '';
+    return {
+      successUrl: `${base}/billing/success${q}`,
+      cancelUrl: `${base}/billing/cancel${q}`,
+    };
+  }
+
   /** Start a hosted Checkout for Pro. Returns the URL the client opens. */
   async createCheckout(user: User, dto: CheckoutDto): Promise<{ url: string }> {
     const existing = await this.entitlements.findSubscription(user.id);
@@ -73,12 +106,13 @@ export class BillingService {
         ? Math.floor(new Date(user.trialEndsAt).getTime() / 1000)
         : undefined;
 
+    const { successUrl, cancelUrl } = this.billingReturnUrls(dto.platform);
     const url = await this.stripe.createCheckoutSession({
       customerId,
       priceId: this.stripe.priceIdFor(dto.interval),
       userId: user.id,
-      successUrl: `${this.appUrl()}/billing/success`,
-      cancelUrl: `${this.appUrl()}/billing/cancel`,
+      successUrl,
+      cancelUrl,
       trialEnd,
     });
     return { url };

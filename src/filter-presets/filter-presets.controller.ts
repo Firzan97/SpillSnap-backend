@@ -17,6 +17,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
+import { EntitlementService } from '../billing/entitlement.service';
+import { assertPro } from '../billing/require-pro';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { CreateFilterPresetDto } from './dto/create-filter-preset.dto';
@@ -28,7 +30,10 @@ import { FilterPresetsService } from './filter-presets.service';
 @UseGuards(ClerkAuthGuard)
 @Controller('filter-presets')
 export class FilterPresetsController {
-  constructor(private readonly presets: FilterPresetsService) {}
+  constructor(
+    private readonly presets: FilterPresetsService,
+    private readonly entitlements: EntitlementService,
+  ) {}
 
   // GET /filter-presets
   @Get()
@@ -42,7 +47,8 @@ export class FilterPresetsController {
   @Post()
   @ApiOperation({ summary: 'Save the current filter combo as a named preset' })
   @ApiCreatedResponse({ type: FilterPreset })
-  create(@CurrentUser() user: User, @Body() dto: CreateFilterPresetDto) {
+  async create(@CurrentUser() user: User, @Body() dto: CreateFilterPresetDto) {
+    assertPro(await this.entitlements.resolve(user), 'Saved filters');
     return this.presets.create(user.id, dto);
   }
 
