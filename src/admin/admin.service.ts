@@ -22,8 +22,23 @@ export interface UserRow {
   status: string | null; // subscription status if any
   billingInterval: string | null;
   country: string;
+  devices: string[]; // platforms from registered push tokens: ios | android
   createdAt: string;
   trialEndsAt: string | null;
+}
+
+/** Global device split (distinct users per platform; a user may have both). */
+export interface DeviceSummary {
+  ios: number;
+  android: number;
+  both: number;
+  noDevice: number;
+}
+
+/** Response for the users list page. */
+export interface UsersResponse {
+  rows: UserRow[];
+  devices: DeviceSummary;
 }
 
 /** A {label,value} row used by the dashboard's bars and tables. */
@@ -282,15 +297,55 @@ export class AdminService {
   }
 
   // ── Users list ──────────────────────────────────────────────────────────────
+  /** Recent registrations (with plan + devices) plus the global device split. */
+  async usersPage(limit = 50): Promise<UsersResponse> {
+    const [rows, devices] = await Promise.all([
+      this.recentUsers(limit),
+      this.deviceSummary(),
+    ]);
+    return { rows, devices };
+  }
+
+  /** Distinct users per push-token platform, across ALL users (not paginated). */
+  private async deviceSummary(): Promise<DeviceSummary> {
+    const row = await this.users.query(
+      `WITH per_user AS (
+         SELECT user_id,
+                bool_or(platform = 'ios') AS has_ios,
+                bool_or(platform = 'android') AS has_android
+         FROM push_tokens GROUP BY user_id
+       )
+       SELECT
+         COUNT(*) FILTER (WHERE has_ios)::int AS ios,
+         COUNT(*) FILTER (WHERE has_android)::int AS android,
+         COUNT(*) FILTER (WHERE has_ios AND has_android)::int AS both
+       FROM per_user`,
+    );
+    const ios = toInt(row?.[0]?.ios);
+    const android = toInt(row?.[0]?.android);
+    const both = toInt(row?.[0]?.both);
+    const withDeviceRow = await this.users.query(
+      `SELECT COUNT(DISTINCT user_id)::int AS value FROM push_tokens`,
+    );
+    const totalUsers = await this.users.count();
+    const noDevice = Math.max(0, totalUsers - toInt(withDeviceRow?.[0]?.value));
+    return { ios, android, both, noDevice };
+  }
+
   /** Most-recent registrations with their resolved plan (pro/trial/free). */
   async recentUsers(limit = 50): Promise<UserRow[]> {
     const lim = Math.min(Math.max(1, limit), 200);
     const rows = await this.users.query(
       `SELECT u.id, u.email, u.name, u.role, u.country,
               u.created_at, u.trial_ends_at,
-              s.status AS sub_status, s.billing_interval, s.current_period_end
+              s.status AS sub_status, s.billing_interval, s.current_period_end,
+              d.platforms
        FROM users u
        LEFT JOIN subscriptions s ON s.user_id = u.id
+       LEFT JOIN LATERAL (
+         SELECT array_agg(DISTINCT p.platform) AS platforms
+         FROM push_tokens p WHERE p.user_id = u.id::text
+       ) d ON true
        ORDER BY u.created_at DESC
        LIMIT $1`,
       [lim],
@@ -321,6 +376,7 @@ export class AdminService {
         status,
         billingInterval: (r.billing_interval as string) ?? null,
         country: (r.country as string) ?? '',
+        devices: ((r.platforms as string[] | null) ?? []).filter(Boolean),
         createdAt: new Date(r.created_at as string).toISOString(),
         trialEndsAt: trialEnds ? trialEnds.toISOString() : null,
       };

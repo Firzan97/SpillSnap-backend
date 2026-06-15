@@ -44,7 +44,7 @@ export class AdminController {
   })
   @ApiResponse({ status: 200, description: 'User rows' })
   users(@Query('limit') limit?: string) {
-    return this.adminService.recentUsers(limit ? Number(limit) : 50);
+    return this.adminService.usersPage(limit ? Number(limit) : 50);
   }
 
   @Post('reset')
