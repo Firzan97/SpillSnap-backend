@@ -118,6 +118,53 @@ The Stripe webhook needs the **raw request body** (the app is created with `rawB
 
 Deployment (Exabytes VPS + Caddy + systemd) is documented in [`deploy/DEPLOY.md`](deploy/DEPLOY.md), with `deploy/Caddyfile`, `deploy/spillsnap-api.service`, and `deploy/deploy.sh`.
 
+## Receipt extraction performance
+
+Extraction runs Claude **Haiku** first and escalates to **Sonnet** only when the
+fast pass is low-confidence (`< 70`). Timing is logged per scan (`[scan] …`).
+
+Benchmark (synthetic ~1280px receipt, 3 runs each; real photos run higher as
+vision tokens scale with detail):
+
+| Stage | Time |
+|-------|------|
+| Downscale (sharp, local) | ~13 ms (negligible) |
+| Haiku fast pass | ~2.5 s (in ≈2.1k tok, out ≈80 tok) |
+| Sonnet (escalation) | ~2.4 s — runs as a **second** call, so a low-confidence scan ≈ doubles to ~5 s |
+
+**Bottleneck = the model round-trip**, not encoding/downscale. Levers to make it
+faster (ordered by impact):
+
+1. **Escalation is the main cost.** When confidence `< 70` it fires a second call
+   (~doubles latency) for marginal accuracy gain. Consider dropping it (return a
+   low-confidence flag for user review) or escalating only on the app path, not
+   WhatsApp.
+2. **Overlap storage upload with extraction** in `capture()` (currently
+   sequential) to shave ~0.5–1 s. Trade-off: non-receipts get briefly stored then
+   cleaned up.
+3. **Downscale 1280 → 1024 px** to cut vision input tokens ~35% (faster + cheaper);
+   verify small-text legibility first.
+4. **Stream / optimistic UI** for perceived speed.
+
+Prod numbers are in the `[scan]` lines of `pm2 logs spillsnap-api`.
+
+## Sample / test users
+
+A set of seed users covers every entitlement branch (created in the **dev/test**
+Clerk instance; all share password `Spillsnap12345`):
+
+| Email | State |
+|-------|-------|
+| `sample.pro@spillsnap.com` | Pro — active monthly subscription |
+| `sample.annual@spillsnap.com` | Pro — active annual subscription |
+| `sample.trial@spillsnap.com` | Free-trial active (7 days) → treated as Pro |
+| `sample.free@spillsnap.com` | Post-trial Free (1 upload/day) |
+| `sample.expired@spillsnap.com` | Expired subscription → Free |
+| `sample.pastdue@spillsnap.com` | Past-due subscription → Free |
+
+Entitlement rule: `isPro = active/trialing paid subscription OR trialEndsAt in the
+future`. These are test fixtures only — not real customers.
+
 ## License
 
 UNLICENSED — private project.
