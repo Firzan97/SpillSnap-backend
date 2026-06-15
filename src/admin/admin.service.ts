@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-enum-comparison */
+// Admin metrics use raw SQL via repo.query(), which TypeORM types as `any`. The
+// row shapes are asserted at the access site (toInt(...) / `as string`), so the
+// unsafe-any rules are disabled for this file rather than littered per-line.
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -196,7 +200,15 @@ export class AdminService {
       .where("u.created_at >= now() - interval '7 days'")
       .getCount();
 
-    return { total, onTrial, newLast7d, byRole, byAuthProvider, byCountry, signupsLast30d };
+    return {
+      total,
+      onTrial,
+      newLast7d,
+      byRole,
+      byAuthProvider,
+      byCountry,
+      signupsLast30d,
+    };
   }
 
   // ── Subscriptions ──────────────────────────────────────────────────────────
@@ -232,7 +244,15 @@ export class AdminService {
         ? Number(((active / (active + trialing)) * 100).toFixed(1))
         : 0;
 
-    return { byStatus, byInterval, active, trialing, pastDue, cancelPending, conversionRate };
+    return {
+      byStatus,
+      byInterval,
+      active,
+      trialing,
+      pastDue,
+      cancelPending,
+      conversionRate,
+    };
   }
 
   // ── Receipts ────────────────────────────────────────────────────────────────
@@ -412,7 +432,10 @@ export class AdminService {
     );
     const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const peakWeekday = dowRow?.[0]
-      ? { label: DOW[toInt(dowRow[0].dow)] ?? '—', value: toInt(dowRow[0].value) }
+      ? {
+          label: DOW[toInt(dowRow[0].dow)] ?? '—',
+          value: toInt(dowRow[0].value),
+        }
       : null;
 
     // active today (KL) vs not
@@ -499,7 +522,9 @@ export class AdminService {
     );
     const now = Date.now();
     return (rows as Record<string, unknown>[]).map((r) => {
-      const trialEnds = r.trial_ends_at ? new Date(r.trial_ends_at as string) : null;
+      const trialEnds = r.trial_ends_at
+        ? new Date(r.trial_ends_at as string)
+        : null;
       const periodEnd = r.current_period_end
         ? new Date(r.current_period_end as string)
         : null;
@@ -549,13 +574,18 @@ export class AdminService {
       );
       const ids = victims.map((v) => v.id);
 
-      const count = async (sql: string, params: unknown[] = []): Promise<number> => {
+      const count = async (
+        sql: string,
+        params: unknown[] = [],
+      ): Promise<number> => {
         const r = await em.query(sql, params);
         return Number(r?.[0]?.value ?? 0);
       };
 
       if (ids.length === 0) {
-        const cleared = await count(`SELECT COUNT(*)::int AS value FROM ai_usage`);
+        const cleared = await count(
+          `SELECT COUNT(*)::int AS value FROM ai_usage`,
+        );
         await em.query(`DELETE FROM ai_usage`);
         return {
           deletedUsers: 0,
@@ -573,12 +603,16 @@ export class AdminService {
         `SELECT COUNT(*)::int AS value FROM subscriptions WHERE user_id = ANY($1)`,
         [ids],
       );
-      const clearedAiUsage = await count(`SELECT COUNT(*)::int AS value FROM ai_usage`);
+      const clearedAiUsage = await count(
+        `SELECT COUNT(*)::int AS value FROM ai_usage`,
+      );
 
       // Explicit child deletes first (don't rely solely on FK cascade).
       await em.query(`DELETE FROM ai_usage`); // full reset of token stats
       await em.query(`DELETE FROM receipts WHERE user_id = ANY($1)`, [ids]);
-      await em.query(`DELETE FROM subscriptions WHERE user_id = ANY($1)`, [ids]);
+      await em.query(`DELETE FROM subscriptions WHERE user_id = ANY($1)`, [
+        ids,
+      ]);
       await em.query(`DELETE FROM daily_usage WHERE user_id = ANY($1)`, [ids]);
       await em.query(`DELETE FROM users WHERE id = ANY($1)`, [ids]);
 
