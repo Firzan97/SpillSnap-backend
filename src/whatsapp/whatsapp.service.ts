@@ -120,7 +120,7 @@ export class WhatsappService {
       if (!user) {
         await this.sender.sendText(
           from,
-          "👋 This number isn't linked to a SpillSnap account. Open the app → Profile → Account & security and add this WhatsApp number, then try again.",
+          "This number isn't linked to a SpillSnap account. Open the app, go to Profile, then Account & security, and add this WhatsApp number, then try again.",
         );
         return;
       }
@@ -159,7 +159,7 @@ export class WhatsappService {
       this.pending.set(from, batch);
       await this.sender.sendText(
         from,
-        `Got image ${batch.files.length}. 📎 Send the next section if it's a long receipt, or reply *DONE* to process.`,
+        `Got image ${batch.files.length}. Send the next section if it's a long receipt, or reply *DONE* to process.`,
       );
       return;
     }
@@ -171,13 +171,13 @@ export class WhatsappService {
       } else {
         await this.sender.sendText(
           from,
-          '📸 Send a photo of your receipt. For a long receipt, send each section as a separate photo, then reply *DONE*.',
+          'Send a photo of your receipt. For a long receipt, send each section as a separate photo, then reply *DONE*.',
         );
       }
       return;
     }
 
-    await this.sender.sendText(from, '📸 Please send your receipt as a photo.');
+    await this.sender.sendText(from, 'Please send your receipt as a photo.');
   }
 
   // ── Batch lifecycle ─────────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ export class WhatsappService {
       return;
     }
 
-    await this.sender.sendText(from, '⏳ Reading your receipt…');
+    await this.sender.sendText(from, 'Reading your receipt…');
     try {
       // Analyze first (no save) so we can act on the detection flags.
       const extracted = await this.receipts.analyze(user, batch.files);
@@ -217,7 +217,7 @@ export class WhatsappService {
         this.pending.delete(from);
         await this.sender.sendText(
           from,
-          `⚠️ ${extracted.rejectReason ?? "That doesn't look like a receipt."} Please resend a clear photo.`,
+          `${extracted.rejectReason ?? "That doesn't look like a receipt."} Please resend a clear photo.`,
         );
         return;
       }
@@ -228,7 +228,7 @@ export class WhatsappService {
         this.pending.delete(from);
         await this.sender.sendText(
           from,
-          '🧾 Looks like more than one receipt here. Please send one receipt at a time — snap each receipt on its own, then reply *DONE*.',
+          'Looks like more than one receipt here. Please send one receipt at a time — snap each receipt on its own, then reply *DONE*.',
         );
         return;
       }
@@ -242,7 +242,7 @@ export class WhatsappService {
         this.pending.set(from, batch);
         await this.sender.sendText(
           from,
-          '🤔 Are you sure this is the whole receipt? It looks like part of it might be missing — I couldn’t see the final total.\n\n📎 If it’s a long receipt, send the remaining section(s) now, then reply *DONE*. Or reply *DONE* again to save it as-is.',
+          'Are you sure this is the whole receipt? It looks like part of it might be missing — I couldn’t see the final total.\n\nIf it’s a long receipt, send the remaining section(s) now, then reply *DONE*. Or reply *DONE* again to save it as-is.',
         );
         return;
       }
@@ -255,14 +255,14 @@ export class WhatsappService {
         : '\n(Saved as-is — double-check the total in the app.)';
       await this.sender.sendText(
         from,
-        `✅ Saved! *${r.merchant}* - ${r.currency} ${Number(r.amount).toFixed(2)}${note}\nView it in the SpillSnap app.`,
+        `Saved! *${r.merchant}* - ${r.currency} ${Number(r.amount).toFixed(2)}${note}\nView it in the SpillSnap app.`,
       );
     } catch (e) {
       this.pending.delete(from);
       this.logger.error(`finalize failed: ${(e as Error).message}`);
       await this.sender.sendText(
         from,
-        '😕 Something went wrong saving that. Please try again.',
+        'Something went wrong saving that. Please try again.',
       );
     }
   }
