@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -87,6 +88,23 @@ export class BillingService {
   /** Start a hosted Checkout for Pro. Returns the URL the client opens. */
   async createCheckout(user: User, dto: CheckoutDto): Promise<{ url: string }> {
     const existing = await this.entitlements.findSubscription(user.id);
+
+    // Already on a live paid plan? Don't let them open a second checkout (which
+    // would create a duplicate Stripe subscription). Gate on a real Stripe
+    // subscription id so we don't block the pre-checkout placeholder record or
+    // a user converting their app trial into their first paid plan. They manage
+    // an existing plan via the Customer Portal instead.
+    const hasLivePaidPlan =
+      !!existing?.stripeSubscriptionId &&
+      (existing.status === SubscriptionStatus.ACTIVE ||
+        existing.status === SubscriptionStatus.TRIALING) &&
+      (!existing.currentPeriodEnd || existing.currentPeriodEnd > new Date());
+    if (hasLivePaidPlan) {
+      throw new ConflictException(
+        'You already have an active subscription. Manage it from your account billing page.',
+      );
+    }
+
     const customerId = await this.stripe.ensureCustomer({
       userId: user.id,
       email: user.email,
