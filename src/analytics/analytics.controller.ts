@@ -27,6 +27,11 @@ export class AnalyticsController {
   @ApiResponse({ status: 200, description: 'Analytics payload' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getAnalytics(@CurrentUser() user: User, @Query() query: AnalyticsQueryDto) {
-    return this.analyticsService.getAnalytics(user, query.range);
+    return this.analyticsService.getAnalytics(
+      user,
+      query.range,
+      query.dateFrom,
+      query.dateTo,
+    );
   }
 }

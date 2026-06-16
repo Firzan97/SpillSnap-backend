@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { Receipt } from '../receipts/entities/receipt.entity';
 import { User } from '../users/entities/user.entity';
 
@@ -17,7 +17,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   other: '#94A3B8',
 };
 
-export type AnalyticsRange = '6m' | '12m' | 'ya' | 'all';
+export type AnalyticsRange = '6m' | '12m' | 'ya' | 'all' | 'month' | 'custom';
 
 const MONTH_LABELS = [
   'Jan',
@@ -48,19 +48,36 @@ export class AnalyticsService {
     private readonly receiptRepo: Repository<Receipt>,
   ) {}
 
-  async getAnalytics(user: User, range: AnalyticsRange = '12m') {
+  async getAnalytics(
+    user: User,
+    range: AnalyticsRange = '12m',
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
     const now = new Date();
     const baseAmt = (r: Receipt) => Number(r.baseAmount ?? r.amount);
     const currency = user.baseCurrency ?? 'MYR';
 
-    // Resolve the time window. `start === null` means all-time.
-    const start = this.windowStart(range, now);
+    // Resolve the time window. A custom range uses the explicit from/to dates
+    // (to defaults to now); otherwise a preset window where `start === null`
+    // means all-time and `end` is open-ended.
+    let start: Date | null;
+    let end: Date | null = null;
+    if (range === 'custom' && dateFrom) {
+      start = new Date(dateFrom);
+      end = dateTo ? new Date(dateTo) : now;
+    } else {
+      start = this.windowStart(range, now);
+    }
 
     // One fetch drives every chart - volume is modest, so we aggregate in JS.
     const receipts = await this.receiptRepo.find({
-      where: start
-        ? { userId: user.id, receiptDate: MoreThanOrEqual(start) }
-        : { userId: user.id },
+      where:
+        start && end
+          ? { userId: user.id, receiptDate: Between(start, end) }
+          : start
+            ? { userId: user.id, receiptDate: MoreThanOrEqual(start) }
+            : { userId: user.id },
       order: { receiptDate: 'ASC' },
     });
 
@@ -203,7 +220,10 @@ export class AnalyticsService {
         return startOfMonth(now, 11);
       case 'ya':
         return new Date(now.getFullYear(), 0, 1);
+      case 'month':
+        return startOfMonth(now, 0);
       case 'all':
+      case 'custom':
         return null;
     }
   }
