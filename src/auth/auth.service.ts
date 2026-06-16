@@ -146,14 +146,17 @@ export class AuthService {
    */
   async sendOnboardingIfNeeded(user: User): Promise<void> {
     if (user.waOnboardedAt) return; // already greeted once
-    const template = this.config.get<string>('WHATSAPP_WELCOME_TEMPLATE');
-    const lang = this.config.get<string>('WHATSAPP_TEMPLATE_LANG') ?? 'en';
     const phone = user.phone?.replace(/\D/g, '');
-    if (!template || !phone) return;
+    if (!phone) return;
     const firstName = user.name?.split(/\s+/)[0] || 'there';
     try {
-      await this.whatsapp.sendTemplate(phone, template, lang, [firstName]);
-      await this.usersService.update(user.id, { waOnboardedAt: new Date() });
+      // Only mark as greeted when Meta actually accepted the message, so a
+      // failed send (bad template, unverified recipient) retries on the next
+      // phone-edit instead of silently locking the user out forever.
+      const sent = await this.whatsapp.sendWelcome(phone, firstName);
+      if (sent) {
+        await this.usersService.update(user.id, { waOnboardedAt: new Date() });
+      }
     } catch (e) {
       this.logger.warn(`Onboarding WhatsApp failed: ${(e as Error).message}`);
     }

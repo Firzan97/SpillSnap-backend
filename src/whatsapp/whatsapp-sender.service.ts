@@ -31,8 +31,8 @@ export class WhatsappSenderService {
   }
 
   /** Free-form text - only deliverable inside an open 24h customer-service window. */
-  async sendText(to: string, body: string): Promise<void> {
-    await this.post({
+  async sendText(to: string, body: string): Promise<boolean> {
+    return this.post({
       messaging_product: 'whatsapp',
       to,
       type: 'text',
@@ -43,14 +43,15 @@ export class WhatsappSenderService {
   /**
    * Send an approved message template (the only way to message a user cold,
    * outside the 24h window). `bodyParams` fill {{1}}, {{2}}… in order.
+   * Returns true only if Meta accepted the message.
    */
   async sendTemplate(
     to: string,
     templateName: string,
     languageCode: string,
     bodyParams: string[] = [],
-  ): Promise<void> {
-    await this.post({
+  ): Promise<boolean> {
+    return this.post({
       messaging_product: 'whatsapp',
       to,
       type: 'template',
@@ -67,6 +68,27 @@ export class WhatsappSenderService {
           : [],
       },
     });
+  }
+
+  /**
+   * One-time onboarding/welcome template, resolved from config so every caller
+   * (signup, Pro upgrade, phone-edit) stays in sync. Returns true only on a real
+   * Meta-accepted send so callers can persist a "greeted" flag without marking
+   * users who never actually got the message.
+   *
+   * `hello_world` is Meta's universal sample template — it has NO body variable
+   * and only exists in `en_US`. Special-case it so a dev can smoke-test delivery
+   * before a branded template is approved; any other template gets the configured
+   * language plus the user's first name in {{1}}.
+   */
+  async sendWelcome(to: string, firstName: string): Promise<boolean> {
+    const template = this.config.get<string>('WHATSAPP_WELCOME_TEMPLATE')?.trim();
+    if (!template) return false;
+    if (template === 'hello_world') {
+      return this.sendTemplate(to, 'hello_world', 'en_US', []);
+    }
+    const lang = this.config.get<string>('WHATSAPP_TEMPLATE_LANG')?.trim() || 'en';
+    return this.sendTemplate(to, template, lang, [firstName]);
   }
 
   async downloadMedia(
@@ -95,8 +117,9 @@ export class WhatsappSenderService {
     }
   }
 
-  private async post(payload: Record<string, unknown>): Promise<void> {
-    if (!this.enabled) return;
+  /** Returns true only when Meta accepted the message (HTTP 2xx). */
+  private async post(payload: Record<string, unknown>): Promise<boolean> {
+    if (!this.enabled) return false;
     try {
       const res = await fetch(
         `${this.graphBase}/${this.phoneNumberId}/messages`,
@@ -111,9 +134,12 @@ export class WhatsappSenderService {
       );
       if (!res.ok) {
         this.logger.warn(`send ${res.status}: ${await res.text()}`);
+        return false;
       }
+      return true;
     } catch (e) {
       this.logger.warn(`send error: ${(e as Error).message}`);
+      return false;
     }
   }
 }
