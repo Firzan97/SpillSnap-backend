@@ -42,9 +42,14 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        // Single source of connection truth. When `url` is set, TypeORM uses it
-        // and ignores any discrete host/port/user/pass, so we only keep the URL.
-        url: config.getOrThrow('DATABASE_URL'),
+        // Prefer DATABASE_URL when set; otherwise fall back to the discrete
+        // DB_* fields (some environments — incl. prod — only set those).
+        url: config.get('DATABASE_URL'),
+        host: config.get('DB_HOST', 'localhost'),
+        port: config.get<number>('DB_PORT', 5432),
+        username: config.get('DB_USER', 'spendsnap'),
+        password: config.get('DB_PASS', 'password'),
+        database: config.get('DB_NAME', 'spendsnap'),
         entities: [
           User,
           Receipt,

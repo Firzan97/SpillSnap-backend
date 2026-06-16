@@ -72,7 +72,7 @@ Swagger docs (non-production only): **`http://localhost:3000/docs`**
 
 All variables are documented in [`.env.example`](.env.example). Key groups:
 
-- **Database** — `DATABASE_URL` (single connection string; required)
+- **Database** — `DATABASE_URL` (connection string) **or** discrete `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASS`/`DB_NAME` (used when `DATABASE_URL` is unset)
 - **Auth (Clerk)** — `CLERK_SECRET_KEY`, `CLERK_ISSUER` (Google SSO etc. configured in the Clerk dashboard, not here). App boots crash if these are missing in production.
 - **Storage (Supabase)** — `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STORAGE_BUCKET` (private receipts), `AVATAR_BUCKET` (public avatars)
 - **Receipt OCR** — `ANTHROPIC_API_KEY`
