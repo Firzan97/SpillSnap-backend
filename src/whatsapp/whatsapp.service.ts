@@ -157,6 +157,15 @@ export class WhatsappService {
       batch.files.push(media);
       this.resetTimer(from, batch);
       this.pending.set(from, batch);
+      // First image → detect completeness right away. A complete receipt is
+      // saved immediately (no DONE needed); if it looks cut off, finalize()
+      // warns and keeps the batch open for the remaining sections. Later images
+      // just buffer until DONE / the idle timer (avoids re-running the model on
+      // every image).
+      if (batch.files.length === 1) {
+        await this.finalize(from);
+        return;
+      }
       await this.sender.sendText(
         from,
         `Got image ${batch.files.length}. Send the next section if it's a long receipt, or reply *DONE* to process.`,
@@ -242,7 +251,7 @@ export class WhatsappService {
         this.pending.set(from, batch);
         await this.sender.sendText(
           from,
-          'Are you sure this is the whole receipt? It looks like part of it might be missing — I couldn’t see the final total.\n\nIf it’s a long receipt, send the remaining section(s) now, then reply *DONE*. Or reply *DONE* again to save it as-is.',
+          'Looks like a long receipt — I couldn’t see the final total, so there may be more.\n\nGot another section to add? Send it now and I’ll combine them. If that’s the whole thing, reply *DONE* and I’ll save it as-is.',
         );
         return;
       }

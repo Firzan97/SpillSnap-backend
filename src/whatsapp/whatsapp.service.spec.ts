@@ -13,10 +13,16 @@ function setup(isPro: boolean) {
   };
   const users = {
     findByPhoneDigits: jest.fn().mockResolvedValue({ id: 'u1', name: 'Ali' }),
-    findById: jest.fn().mockResolvedValue(null),
+    findById: jest.fn().mockResolvedValue({ id: 'u1', name: 'Ali' }),
   };
   const entitlement = { resolve: jest.fn().mockResolvedValue({ isPro }) };
-  const receipts = { captureAndSave: jest.fn() };
+  // First image is analyzed eagerly; a complete receipt is saved right away.
+  const receipts = {
+    analyze: jest.fn().mockResolvedValue({ isReceipt: true, complete: true }),
+    saveExtracted: jest
+      .fn()
+      .mockResolvedValue({ merchant: 'Kedai', amount: '10.00', currency: 'MYR' }),
+  };
   const config = { get: jest.fn() };
   const svc = new WhatsappService(
     config as never,
@@ -41,15 +47,19 @@ describe('WhatsappService — free-user gate', () => {
     expect(msg).toMatch(/free trial/i);
     expect(msg).toContain('spillsnap.com/pricing');
     expect(sender.downloadMedia).not.toHaveBeenCalled();
-    expect(receipts.captureAndSave).not.toHaveBeenCalled();
+    expect(receipts.analyze).not.toHaveBeenCalled();
   });
 
-  it('Pro user → image is downloaded + batched (not blocked)', async () => {
-    const { svc, sender } = setup(true);
+  it('Pro user → first image is downloaded + processed (not blocked)', async () => {
+    const { svc, sender, receipts } = setup(true);
     await svc.handleWebhook(imageFrom('60123456789'));
 
     expect(sender.downloadMedia).toHaveBeenCalledTimes(1);
-    const msg = sender.sendText.mock.calls[0][1] as string;
-    expect(msg).not.toMatch(/free trial/i);
+    // Eager analysis on the first image; complete → saved without a DONE.
+    expect(receipts.analyze).toHaveBeenCalledTimes(1);
+    expect(receipts.saveExtracted).toHaveBeenCalledTimes(1);
+    const msgs = sender.sendText.mock.calls.map((c) => c[1] as string).join('\n');
+    expect(msgs).not.toMatch(/free trial/i);
+    expect(msgs).toMatch(/saved/i);
   });
 });
