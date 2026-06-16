@@ -73,12 +73,13 @@ export class EntitlementService {
 
     let status: SubscriptionStatus;
     if (paidActive) {
-      // A card-on-file subscriber presents as ACTIVE even while Stripe defers
-      // the first charge — when a user subscribes during the 7-day app trial,
-      // Stripe marks the subscription 'trialing' until trial_end. Reporting that
-      // raw status made a *paid* user wrongly show as "trialing". The deferred
-      // first-charge date is still conveyed via renewsAt.
-      status = SubscriptionStatus.ACTIVE;
+      // Report Stripe's real status. When a user subscribes during the 7-day app
+      // trial, Stripe defers the first charge and marks the subscription
+      // 'trialing' until trial_end, then flips to 'active'. We surface that as-is
+      // so the account page reads "trialing" until the trial date passes, then
+      // "active". `subscribed` (below) distinguishes a paying card-on-file user
+      // from a card-less free trial regardless of this status.
+      status = sub!.status;
     } else if (trialActive) {
       status = SubscriptionStatus.TRIALING; // free, card-less app trial only
     } else {
