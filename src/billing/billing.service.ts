@@ -118,10 +118,18 @@ export class BillingService {
       status: existing?.status ?? SubscriptionStatus.TRIALING,
     });
 
-    // Don't bill during the remaining app trial.
+    // The 7-day free trial is once per user. Only defer billing if the app
+    // trial is STILL running AND the user has never had a Stripe subscription
+    // before (a prior subscription id means the trial was already consumed).
+    // An expired-trial user upgrading later is billed immediately — no second
+    // free trial. (The Stripe Price must NOT have its own default trial set,
+    // or it would apply regardless; trials are controlled here via trial_end.)
+    const trialAlreadyUsed = !!existing?.stripeSubscriptionId;
+    const appTrialActive =
+      !!user.trialEndsAt && new Date(user.trialEndsAt) > new Date();
     const trialEnd =
-      user.trialEndsAt && new Date(user.trialEndsAt) > new Date()
-        ? Math.floor(new Date(user.trialEndsAt).getTime() / 1000)
+      !trialAlreadyUsed && appTrialActive
+        ? Math.floor(new Date(user.trialEndsAt!).getTime() / 1000)
         : undefined;
 
     const { successUrl, cancelUrl } = this.billingReturnUrls(dto.platform);
