@@ -73,9 +73,9 @@ export const PRICING_PLANS: PricingPlan[] = [
       '1 receipt upload per day',
       'Auto-OCR & categorisation',
       'Streaks & leaderboards',
-      'Manual tags + CSV export',
+      'Manual tags & notes',
     ],
-    notIncluded: ['Unlimited scans', 'Saved filters & filtered export', 'LHDN tax tagging'],
+    notIncluded: ['Unlimited scans', 'CSV data export', 'Saved filters & filtered export', 'LHDN tax tagging'],
   },
   {
     id: PlanId.PRO,
@@ -101,6 +101,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     ],
     features: [
       'Unlimited scans · iOS + Android',
+      'Export your data to CSV',
       'LHDN tax tagging + e-Filing export',
       'Saved filters & filtered export',
       'Multi-currency (RM, SGD, USD)',

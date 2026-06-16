@@ -59,11 +59,11 @@ export class BillingService {
    * the app. Falls back to FRONTEND_URL for local/dev.
    */
   private webUrl(): string {
-    return (
-      this.config.get<string>('WEB_URL') ??
-      this.config.get<string>('FRONTEND_URL') ??
-      'https://spillsnap.com'
-    );
+    // Public website origin only. Do NOT fall back to FRONTEND_URL — on prod
+    // that's the app origin (e.g. http://localhost:8081), which made Stripe
+    // redirect mobile users to localhost after payment. WEB_URL if set, else
+    // the real public site.
+    return this.config.get<string>('WEB_URL') ?? 'https://spillsnap.com';
   }
 
   /**
