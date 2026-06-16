@@ -20,6 +20,7 @@ export interface Entitlement {
   plan: PlanId;
   status: SubscriptionStatus;
   isPro: boolean; // trialing or actively subscribed
+  subscribed: boolean; // has a paid subscription (card on file) — distinct from the free trial
   canSnap: boolean; // may upload a receipt right now
   uploadsToday: number;
   dailyUploadLimit: number | null; // null = unlimited
@@ -71,14 +72,24 @@ export class EntitlementService {
     const canSnap = isPro || uploadsToday < FREE_DAILY_UPLOAD_LIMIT;
 
     let status: SubscriptionStatus;
-    if (paidActive) status = sub.status;
-    else if (trialActive) status = SubscriptionStatus.TRIALING;
-    else status = sub?.status ?? SubscriptionStatus.EXPIRED;
+    if (paidActive) {
+      // A card-on-file subscriber presents as ACTIVE even while Stripe defers
+      // the first charge — when a user subscribes during the 7-day app trial,
+      // Stripe marks the subscription 'trialing' until trial_end. Reporting that
+      // raw status made a *paid* user wrongly show as "trialing". The deferred
+      // first-charge date is still conveyed via renewsAt.
+      status = SubscriptionStatus.ACTIVE;
+    } else if (trialActive) {
+      status = SubscriptionStatus.TRIALING; // free, card-less app trial only
+    } else {
+      status = sub?.status ?? SubscriptionStatus.EXPIRED;
+    }
 
     return {
       plan: isPro ? PlanId.PRO : PlanId.FREE,
       status,
       isPro,
+      subscribed: paidActive,
       canSnap,
       uploadsToday,
       dailyUploadLimit,
