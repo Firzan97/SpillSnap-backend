@@ -71,10 +71,21 @@ Rules:
 - items: one entry per purchased line. qty defaults to 1. unitPrice and total are the per-line figures.
 - subtotal = pre-tax, sstAmount = SST/service tax, total = grand total actually paid.
 - suggestedCategory: best fit from the allowed list.
-- suggestedRelief + taxEligible: Malaysian LHDN personal relief. sports gear -> sports; books -> books;
-  gym/internet/phone/electronics -> lifestyle; clinic/pharmacy/medical -> medical; EV charging -> ev_charging;
-  breastfeeding equipment -> breastfeeding; childcare centre/kindergarten/nursery fees -> childcare;
-  self education/tuition/course fees (recognised study) -> education. Anything else -> none / taxEligible false.
+- suggestedRelief + taxEligible: Malaysian LHDN personal relief. Be CONSERVATIVE - set taxEligible=true ONLY
+  when the receipt's main purchase clearly matches one of the categories below. The spending category being
+  "lifestyle"/"shopping" does NOT by itself make a receipt claimable. When unsure, or for general spending,
+  set suggestedRelief=none and taxEligible=false (a missed claim the user can add is safer than a wrong one).
+    • lifestyle (S46(1)(p)) — ONLY: books/journals/magazines/newspapers (print or digital); a personal
+      computer, smartphone or tablet; a monthly internet subscription; gym membership; or skill/self-
+      improvement course fees. NOT general electronics (TV, fridge, appliances, audio), NOT phone
+      accessories/cases/chargers/cables, NOT clothing/fashion, NOT groceries, NOT dining, NOT general retail.
+    • sports — sports equipment, gym/sports activity or facility rental (separate cap).
+    • medical — clinic/hospital/pharmacy for serious illness, fertility, vaccination, dental, full medical check-up.
+    • ev_charging — EV charging equipment/installation.
+    • breastfeeding — breast pump / breastfeeding equipment.
+    • childcare — registered childcare centre / kindergarten / nursery fees.
+    • education — self education / tuition / recognised course fees.
+  Anything not clearly on this list -> suggestedRelief=none, taxEligible=false.
 - confidence: 0-100, how sure you are about the total + merchant. Be honest; low for blurry/partial receipts.
 - complete: TRUE if the image (or, for multiple images, the set together) shows the WHOLE receipt end-to-end,
   including the grand total / payment line / footer. Set FALSE when it looks cut off or partial - line items
