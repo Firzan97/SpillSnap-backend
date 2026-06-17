@@ -57,8 +57,13 @@ export class EntitlementService {
     const now = new Date();
     const sub = await this.findSubscription(user.id);
 
+    // Pro from a paid plan requires a REAL Stripe subscription (id set by the
+    // webhook AFTER successful payment). Gating on stripeSubscriptionId means
+    // merely STARTING checkout (which pre-creates a customer row) — or
+    // cancelling it — never grants Pro.
     const paidActive =
       !!sub &&
+      !!sub.stripeSubscriptionId &&
       (sub.status === SubscriptionStatus.ACTIVE ||
         sub.status === SubscriptionStatus.TRIALING) &&
       (!sub.currentPeriodEnd || sub.currentPeriodEnd > now);
