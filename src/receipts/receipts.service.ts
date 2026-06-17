@@ -65,7 +65,12 @@ export class ReceiptsService {
       // The quota guard reserves today's Free slot up front. A failed scan -
       // not-a-receipt, OCR/AI error, or storage failure - must NOT consume it;
       // hand the slot back so only a successful scan counts against quota.
-      await this.usage.refund(user.id).catch(() => {});
+      // Best-effort: a refund failure must never mask the original error.
+      try {
+        await this.usage.refund(user.id);
+      } catch {
+        /* ignore */
+      }
       throw err;
     }
   }
