@@ -91,11 +91,13 @@ Rules:
   including the grand total / payment line / footer. Set FALSE when it looks cut off or partial - line items
   end abruptly with no grand total visible, or the top/bottom is clearly missing (a long receipt photographed
   only halfway). When in doubt and no grand total is visible, set complete=false.
-- multipleReceipts: TRUE only if the image(s) clearly contain TWO OR MORE DIFFERENT receipts (different
-  merchants or separate transactions). IMPORTANT: when several images are sent they are normally sequential
-  sections of ONE long receipt - keep multipleReceipts=false for those. Set it true only for genuinely
-  distinct, separate receipts (e.g. two unrelated receipts in one photo, or each photo a different shop). When
-  multipleReceipts=true, still extract the FIRST/primary receipt into the other fields.`;
+- multipleReceipts: TRUE if the image(s) contain TWO OR MORE DIFFERENT receipts (different merchants, or
+  separate transactions even at the same merchant) - whether they're laid out in a single photo OR split
+  across several uploaded images. Judge by CONTENT, not image count: several images can be EITHER sequential
+  top-to-bottom sections of ONE long receipt (multipleReceipts=false) OR several distinct receipts
+  (multipleReceipts=true). Decide from the merchant names, dates, grand totals, and whether the line items
+  continue across the images. When multipleReceipts=true, still extract the FIRST/primary receipt into the
+  other fields.`;
 
 const EXTRACTION_TOOL: Anthropic.Tool = {
   name: 'save_receipt',
@@ -307,8 +309,10 @@ export class ReceiptExtractionService {
 
     const instruction =
       files.length > 1
-        ? `These ${files.length} images are sequential top-to-bottom sections of ONE single receipt (a long receipt photographed in parts). Combine them and extract the receipt exactly once - merge all line items in order and use the grand total from the final section.`
-        : 'Extract this receipt.';
+        ? `These ${files.length} images were uploaded together. Decide which case applies by their CONTENT (merchant, date, totals, whether line items continue) - NOT by the number of images:\n` +
+          `• Sections of ONE long receipt (same merchant + transaction, line items continue top-to-bottom across images): combine them, extract exactly once, merge all line items in order, use the grand total from the final section, and set multipleReceipts=false.\n` +
+          `• TWO OR MORE DIFFERENT receipts (different merchants, or separate transactions even at the same merchant): set multipleReceipts=true and extract only the FIRST/primary receipt into the fields.`
+        : 'Extract this receipt. If this single image actually shows two or more different receipts (e.g. several receipts laid out together), set multipleReceipts=true and extract only the primary one.';
 
     let message: Anthropic.Message;
     const apiStart = Date.now();
@@ -361,6 +365,7 @@ export class ReceiptExtractionService {
       outputTokens: u.output_tokens,
       cacheReadTokens: u.cache_read_input_tokens ?? 0,
       cacheCreationTokens: u.cache_creation_input_tokens ?? 0,
+      durationMs: Date.now() - apiStart,
     });
 
     const toolUse = message.content.find(
