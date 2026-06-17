@@ -43,6 +43,9 @@ export class AiUsage {
   @Column({ name: 'cost_usd', type: 'numeric', precision: 12, scale: 6, default: 0 })
   costUsd: number;
 
+  @Column({ name: 'duration_ms', type: 'int', nullable: true })
+  durationMs: number | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

@@ -59,6 +59,21 @@ export class ReceiptsService {
   // Accepts one or more images (sections of a long receipt). They're merged into
   // a single extracted receipt; the first image is stored as the primary thumbnail.
   async capture(user: User, files: { buffer: Buffer; mimetype: string }[]) {
+    try {
+      return await this.captureInner(user, files);
+    } catch (err) {
+      // The quota guard reserves today's Free slot up front. A failed scan -
+      // not-a-receipt, OCR/AI error, or storage failure - must NOT consume it;
+      // hand the slot back so only a successful scan counts against quota.
+      await this.usage.refund(user.id).catch(() => {});
+      throw err;
+    }
+  }
+
+  private async captureInner(
+    user: User,
+    files: { buffer: Buffer; mimetype: string }[],
+  ) {
     // Extract BEFORE uploading so non-receipt images never hit storage.
     const extracted = await this.extraction.extract(files, {
       userId: user.id,
@@ -66,9 +81,6 @@ export class ReceiptsService {
     });
 
     if (!extracted.isReceipt) {
-      // The quota guard already reserved today's slot - hand it back so a
-      // mistaken upload doesn't burn a Free user's 1/day allowance.
-      await this.usage.refund(user.id);
       throw new UnprocessableEntityException({
         error: 'NOT_A_RECEIPT',
         message:

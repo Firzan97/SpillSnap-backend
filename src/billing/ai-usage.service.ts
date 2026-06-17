@@ -33,6 +33,8 @@ export interface AiUsageInput {
   outputTokens: number;
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
+  /** Wall-clock processing time of the scan call, in milliseconds. */
+  durationMs?: number;
 }
 
 @Injectable()
@@ -77,6 +79,7 @@ export class AiUsageService {
         cacheReadTokens: input.cacheReadTokens ?? 0,
         cacheCreationTokens: input.cacheCreationTokens ?? 0,
         costUsd: this.computeCost(input),
+        durationMs: input.durationMs ?? null,
       });
       await this.repo.save(row);
     } catch (err) {
