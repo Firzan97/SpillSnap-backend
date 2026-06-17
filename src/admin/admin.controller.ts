@@ -8,7 +8,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import type { PricingPayload } from '../billing/plans.config';
+import type { AppLimits, PricingPayload } from '../billing/plans.config';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -89,5 +89,30 @@ export class AdminController {
   @ApiOperation({ summary: 'Revert pricing to the shipped default' })
   resetPricing() {
     return this.adminService.resetPricing();
+  }
+
+  // ── Plan limits (admin-editable) ────────────────────────────────────────────
+  @Get('limits')
+  @ApiOperation({ summary: 'Get effective plan limits + default + override flag' })
+  getLimits() {
+    return this.adminService.getLimits();
+  }
+
+  @Put('limits')
+  @ApiOperation({ summary: 'Save admin-edited plan limits (free monthly scans, trial days)' })
+  @ApiResponse({ status: 200, description: 'Saved limits' })
+  @ApiResponse({ status: 400, description: 'Invalid limits payload' })
+  async setLimits(@Body() payload: AppLimits) {
+    try {
+      return await this.adminService.setLimits(payload);
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+  }
+
+  @Post('limits/reset')
+  @ApiOperation({ summary: 'Revert plan limits to the shipped default' })
+  resetLimits() {
+    return this.adminService.resetLimits();
   }
 }

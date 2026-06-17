@@ -3,15 +3,19 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DailyUsage } from './entities/daily-usage.entity';
 
-/** Calendar date (YYYY-MM-DD) in Malaysia time - the quota resets at MY midnight. */
-export function malaysiaDay(now: Date = new Date()): string {
-  // en-CA renders ISO-style YYYY-MM-DD.
-  return new Intl.DateTimeFormat('en-CA', {
+/**
+ * First day of the current calendar month (YYYY-MM-01) in Malaysia time. The
+ * Free quota is monthly, so we key the usage row on the month start and the
+ * quota resets at MY midnight on the 1st. (Column stays `day` for schema
+ * compatibility; it now holds the month anchor.)
+ */
+export function malaysiaMonth(now: Date = new Date()): string {
+  const ym = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kuala_Lumpur',
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(now);
+  }).format(now); // "YYYY-MM"
+  return `${ym}-01`;
 }
 
 @Injectable()
@@ -21,10 +25,10 @@ export class UsageService {
     private readonly repo: Repository<DailyUsage>,
   ) {}
 
-  /** How many uploads the user has already made today (MY time). */
-  async todayCount(userId: string): Promise<number> {
+  /** How many uploads the user has already made this calendar month (MY time). */
+  async monthCount(userId: string): Promise<number> {
     const row = await this.repo.findOne({
-      where: { userId, day: malaysiaDay() },
+      where: { userId, day: malaysiaMonth() },
     });
     return row?.count ?? 0;
   }
@@ -37,7 +41,7 @@ export class UsageService {
    * the limit: the second one's UPDATE predicate fails and returns no row.
    */
   async tryConsume(userId: string, limit: number): Promise<boolean> {
-    const day = malaysiaDay();
+    const day = malaysiaMonth();
     // repo.query is typed `Promise<any>`; the result is the array of RETURNING
     // rows (empty when the WHERE predicate blocked the upsert).
     const result: unknown[] = await this.repo.query(
@@ -62,7 +66,7 @@ export class UsageService {
     await this.repo.query(
       `UPDATE daily_usage SET count = GREATEST(count - 1, 0)
        WHERE user_id = $1 AND day = $2`,
-      [userId, malaysiaDay()],
+      [userId, malaysiaMonth()],
     );
   }
 }

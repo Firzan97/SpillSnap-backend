@@ -16,6 +16,9 @@ import {
   PRICING_CONFIG_KEY,
   pricingDefault,
   type PricingPayload,
+  DEFAULT_LIMITS,
+  LIMITS_CONFIG_KEY,
+  type AppLimits,
 } from '../billing/plans.config';
 import { PlanId } from '../billing/entities/subscription.entity';
 import { Receipt } from '../receipts/entities/receipt.entity';
@@ -109,6 +112,39 @@ export class AdminService {
   async resetPricing(): Promise<PricingPayload> {
     await this.appConfig.reset(PRICING_CONFIG_KEY);
     return pricingDefault();
+  }
+
+  // ── Plan limits (admin-editable) ────────────────────────────────────────────
+  async getLimits(): Promise<{
+    effective: AppLimits;
+    default: AppLimits;
+    overridden: boolean;
+  }> {
+    const [effective, overridden] = await Promise.all([
+      this.appConfig.get<AppLimits>(LIMITS_CONFIG_KEY, DEFAULT_LIMITS),
+      this.appConfig.isOverridden(LIMITS_CONFIG_KEY),
+    ]);
+    return { effective, default: DEFAULT_LIMITS, overridden };
+  }
+
+  async setLimits(payload: AppLimits): Promise<AppLimits> {
+    const freeMonthlyScans = Number(payload?.freeMonthlyScans);
+    const trialDays = Number(payload?.trialDays);
+    if (!Number.isInteger(freeMonthlyScans) || freeMonthlyScans < 0) {
+      throw new Error('freeMonthlyScans must be a non-negative integer');
+    }
+    if (!Number.isInteger(trialDays) || trialDays < 0) {
+      throw new Error('trialDays must be a non-negative integer');
+    }
+    return this.appConfig.set<AppLimits>(LIMITS_CONFIG_KEY, {
+      freeMonthlyScans,
+      trialDays,
+    });
+  }
+
+  async resetLimits(): Promise<AppLimits> {
+    await this.appConfig.reset(LIMITS_CONFIG_KEY);
+    return DEFAULT_LIMITS;
   }
 
   private validatePricing(p: unknown): asserts p is PricingPayload {

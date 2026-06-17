@@ -9,12 +9,15 @@ import {
   SubscriptionStatus,
 } from './entities/subscription.entity';
 import {
-  FREE_DAILY_UPLOAD_LIMIT,
+  AppLimits,
+  DEFAULT_LIMITS,
   FREE_FEATURES,
+  LIMITS_CONFIG_KEY,
   PRO_FEATURES,
   PlanFeatures,
 } from './plans.config';
 import { UsageService } from './usage.service';
+import { AppConfigService } from '../config/app-config.service';
 
 export interface Entitlement {
   plan: PlanId;
@@ -22,8 +25,8 @@ export interface Entitlement {
   isPro: boolean; // trialing or actively subscribed
   subscribed: boolean; // has a paid subscription (card on file) — distinct from the free trial
   canSnap: boolean; // may upload a receipt right now
-  uploadsToday: number;
-  dailyUploadLimit: number | null; // null = unlimited
+  uploadsThisMonth: number;
+  monthlyUploadLimit: number | null; // null = unlimited
   features: PlanFeatures;
   trialEndsAt: Date | null;
   trialDaysLeft: number;
@@ -42,6 +45,7 @@ export class EntitlementService {
     @InjectRepository(Subscription)
     private readonly subRepo: Repository<Subscription>,
     private readonly usage: UsageService,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   async findSubscription(userId: string): Promise<Subscription | null> {
@@ -72,9 +76,13 @@ export class EntitlementService {
 
     const isPro = paidActive || trialActive;
 
-    const uploadsToday = await this.usage.todayCount(user.id);
-    const dailyUploadLimit = isPro ? null : FREE_DAILY_UPLOAD_LIMIT;
-    const canSnap = isPro || uploadsToday < FREE_DAILY_UPLOAD_LIMIT;
+    const limits = await this.appConfig.get<AppLimits>(
+      LIMITS_CONFIG_KEY,
+      DEFAULT_LIMITS,
+    );
+    const uploadsThisMonth = await this.usage.monthCount(user.id);
+    const monthlyUploadLimit = isPro ? null : limits.freeMonthlyScans;
+    const canSnap = isPro || uploadsThisMonth < limits.freeMonthlyScans;
 
     let status: SubscriptionStatus;
     if (paidActive) {
@@ -97,8 +105,8 @@ export class EntitlementService {
       isPro,
       subscribed: paidActive,
       canSnap,
-      uploadsToday,
-      dailyUploadLimit,
+      uploadsThisMonth,
+      monthlyUploadLimit,
       features: isPro ? PRO_FEATURES : FREE_FEATURES,
       trialEndsAt: user.trialEndsAt ?? null,
       trialDaysLeft: user.trialEndsAt

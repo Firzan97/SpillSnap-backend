@@ -28,11 +28,30 @@ export const PRO_FEATURES: PlanFeatures = {
   leaderboard: true,
 };
 
-/** Post-trial Free tier: 1 receipt upload per day. */
-export const FREE_DAILY_UPLOAD_LIMIT = 1;
+/**
+ * Plan limits. These are the CODE DEFAULTS; the live values are admin-editable
+ * via app_config under LIMITS_CONFIG_KEY, so they can change without an app
+ * release. Read them through AppConfigService.get(LIMITS_CONFIG_KEY, DEFAULT_LIMITS).
+ */
+export const LIMITS_CONFIG_KEY = 'limits';
 
-/** Length of the no-card free trial granted at signup. */
-export const TRIAL_DAYS = 7;
+export interface AppLimits {
+  /** Post-trial Free tier: receipts per calendar month. */
+  freeMonthlyScans: number;
+  /** Length (days) of the no-card free trial granted at signup. */
+  trialDays: number;
+}
+
+export const DEFAULT_LIMITS: AppLimits = {
+  freeMonthlyScans: 15,
+  trialDays: 5,
+};
+
+/** @deprecated use AppLimits.freeMonthlyScans (kept for any static reference). */
+export const FREE_MONTHLY_UPLOAD_LIMIT = DEFAULT_LIMITS.freeMonthlyScans;
+
+/** @deprecated use AppLimits.trialDays. */
+export const TRIAL_DAYS = DEFAULT_LIMITS.trialDays;
 
 /**
  * Public plan catalog that drives the Pricing page. Prices are SST-inclusive
@@ -70,7 +89,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       },
     ],
     features: [
-      '1 receipt upload per day',
+      '15 receipt scans per month',
       'Auto-OCR & categorisation',
       'Streaks & leaderboards',
       'Manual tags & notes',
@@ -115,7 +134,7 @@ export const PRICING_NOTES = {
   currency: 'MYR',
   sstIncludedPct: 8,
   trialDays: TRIAL_DAYS,
-  note: 'Prices in MYR · Includes 8% SST · First 7 days free · Cancel anytime',
+  note: 'Prices in MYR · Includes 8% SST · First 5 days free · Cancel anytime',
 };
 
 // ── Dynamic (admin-editable) pricing ─────────────────────────────────────────

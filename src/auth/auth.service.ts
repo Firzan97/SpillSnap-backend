@@ -4,8 +4,12 @@ import { createClerkClient, type ClerkClient } from '@clerk/backend';
 import { UsersService } from '../users/users.service';
 import { AuthProvider, User } from '../users/entities/user.entity';
 import { WhatsappSenderService } from '../whatsapp/whatsapp-sender.service';
-
-const TRIAL_DAYS = 7;
+import { AppConfigService } from '../config/app-config.service';
+import {
+  AppLimits,
+  DEFAULT_LIMITS,
+  LIMITS_CONFIG_KEY,
+} from '../billing/plans.config';
 
 export interface PublicUser {
   id: string;
@@ -45,6 +49,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly config: ConfigService,
     private readonly whatsapp: WhatsappSenderService,
+    private readonly appConfig: AppConfigService,
   ) {
     this.clerk = createClerkClient({
       secretKey: config.getOrThrow<string>('CLERK_SECRET_KEY'),
@@ -101,8 +106,14 @@ export class AuthService {
       });
     }
 
+    // Trial length is admin-configurable (defaults to 5 days). New users get a
+    // one-time free trial; afterwards they're on the Free plan.
+    const limits = await this.appConfig.get<AppLimits>(
+      LIMITS_CONFIG_KEY,
+      DEFAULT_LIMITS,
+    );
     const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+    trialEndsAt.setDate(trialEndsAt.getDate() + limits.trialDays);
 
     let created: User;
     try {
