@@ -18,6 +18,7 @@ module.exports = {
         PORT: '3000',
       },
       // NestJS ConfigModule loads .env from cwd; PORT/NODE_ENV above are belt-and-braces.
+      env_file: '.env',
       max_memory_restart: '1G', // restart if a leak pushes it past 1GB
       autorestart: true,
       time: true, // prefix logs with timestamps
