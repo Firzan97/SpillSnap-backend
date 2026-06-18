@@ -26,49 +26,14 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    # Self-hosted runner = a MacBook on a MY residential IP. SSH from here to the
+    # VPS is NOT filtered the way GitHub's Azure runner IPs are by Exabytes (the
+    # old ubuntu-latest runner kept hitting `dial :22 i/o timeout`). CLERK_*
+    # secrets are forwarded (envs) and upserted into the VPS .env by deploy.sh;
+    # other secrets already live on the box.
+    runs-on: self-hosted
     steps:
-      # GitHub-runner → VPS SSH intermittently times out (Exabytes edge filtering
-      # of Azure runner IPs). Two attempts so a transient drop doesn't fail the
-      # deploy; deploy.sh is idempotent, so re-running is safe. CLERK_* secrets are
-      # forwarded (envs) and upserted into the VPS .env by deploy.sh; other secrets
-      # already live on the box.
       - name: Deploy to VPS
-        id: deploy1
-        continue-on-error: true
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          CLERK_ISSUER: ${{ secrets.CLERK_ISSUER }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          port: ${{ secrets.VPS_PORT }}
-          timeout: 60s # connect timeout (default 30s) — slow Azure→MY handshakes
-          command_timeout: 15m
-          script_stop: true
-          envs: CLERK_SECRET_KEY,CLERK_ISSUER
-          script: |
-            cd /opt/spillsnap-backend
-            git config --global --add safe.directory /opt/spillsnap-backend || true
-            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /root/.ssh/vps_to_github"
-            git fetch origin main && git reset --hard origin/main
-            ./deploy/deploy.sh
-
-      # Wait before retry so a transient edge-filter drop has time to clear
-      # (back-to-back attempts share the same runner IP, so an immediate retry
-      # usually hits the same block).
-      - name: Wait before retry
-        if: steps.deploy1.outcome == 'failure'
-        run: sleep 30
-
-      # Retry if the first attempt failed (usually a connect timeout).
-      - name: Deploy to VPS (retry)
-        id: deploy2
-        continue-on-error: true
-        if: steps.deploy1.outcome == 'failure'
         uses: appleboy/ssh-action@v1.2.0
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
@@ -80,36 +45,6 @@ jobs:
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           port: ${{ secrets.VPS_PORT }}
           timeout: 60s
-          command_timeout: 15m
-          script_stop: true
-          envs: CLERK_SECRET_KEY,CLERK_ISSUER
-          script: |
-            cd /opt/spillsnap-backend
-            git config --global --add safe.directory /opt/spillsnap-backend || true
-            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /root/.ssh/vps_to_github"
-            git fetch origin main && git reset --hard origin/main
-            ./deploy/deploy.sh
-
-      # Longer wait before the final attempt — gives a stuck VPS / edge filter
-      # the most time to recover before the job is allowed to fail.
-      - name: Wait before final retry
-        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
-        run: sleep 60
-
-      # Final attempt. No continue-on-error: if this fails, the job fails.
-      - name: Deploy to VPS (final)
-        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          CLERK_ISSUER: ${{ secrets.CLERK_ISSUER }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          port: ${{ secrets.VPS_PORT }}
-          timeout: 90s
           command_timeout: 15m
           script_stop: true
           envs: CLERK_SECRET_KEY,CLERK_ISSUER
