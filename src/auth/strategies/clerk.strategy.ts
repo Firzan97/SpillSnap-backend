@@ -20,7 +20,19 @@ export class ClerkStrategy extends PassportStrategy(Strategy, 'clerk') {
     config: ConfigService,
     private readonly authService: AuthService,
   ) {
-    const issuer = config.getOrThrow<string>('CLERK_ISSUER').replace(/\/$/, '');
+    const issuer = config.getOrThrow<string>('CLERK_ISSUER').trim().replace(/\/$/, '');
+    // getOrThrow only guards `undefined` — an empty string slips through and
+    // produces a broken JWKS URL ("/.well-known/jwks.json"), silently 401ing
+    // every request. This bites when an EMPTY CLERK_ISSUER sits in the process
+    // env (e.g. a stale pm2 dump or a blank CI secret): dotenv then refuses to
+    // load the real value from .env. Fail fast with a clear message instead.
+    if (!/^https?:\/\/.+/.test(issuer)) {
+      throw new Error(
+        `CLERK_ISSUER is missing or invalid ("${issuer}"). Set it to your Clerk ` +
+          `Frontend API URL, e.g. https://clerk.spillsnap.com. An empty value in ` +
+          `the process env blocks dotenv from loading the .env value.`,
+      );
+    }
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
