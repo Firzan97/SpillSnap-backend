@@ -20,7 +20,10 @@ export class ClerkStrategy extends PassportStrategy(Strategy, 'clerk') {
     config: ConfigService,
     private readonly authService: AuthService,
   ) {
-    const issuer = config.getOrThrow<string>('CLERK_ISSUER').trim().replace(/\/$/, '');
+    const issuer = config
+      .getOrThrow<string>('CLERK_ISSUER')
+      .trim()
+      .replace(/\/$/, '');
     // getOrThrow only guards `undefined` — an empty string slips through and
     // produces a broken JWKS URL ("/.well-known/jwks.json"), silently 401ing
     // every request. This bites when an EMPTY CLERK_ISSUER sits in the process

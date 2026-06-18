@@ -219,11 +219,12 @@ export class AdminService {
       `SELECT country AS label, COUNT(*)::int AS value FROM users GROUP BY country ORDER BY value DESC LIMIT 10`,
     );
 
-    // Free-trial users = trial window still open right now.
-    const onTrial = await this.users
-      .createQueryBuilder('u')
-      .where('u.trial_ends_at > now()')
-      .getCount();
+    // Trialing users = on a Pro checkout trial right now (card on file, first
+    // charge deferred). The trial lives on the Stripe subscription, not the user
+    // row — signup no longer grants a trial.
+    const onTrial = await this.subs.count({
+      where: { status: SubscriptionStatus.TRIALING },
+    });
 
     const signupsLast30d = await this.daily(
       `SELECT to_char(created_at, 'YYYY-MM-DD') AS day, COUNT(*)::int AS value
@@ -565,14 +566,14 @@ export class AdminService {
         ? new Date(r.current_period_end as string)
         : null;
       const status = (r.sub_status as string) ?? null;
-      const paidActive =
-        (status === SubscriptionStatus.ACTIVE ||
-          status === SubscriptionStatus.TRIALING) &&
-        (!periodEnd || periodEnd.getTime() > now);
-      const trialActive = !!trialEnds && trialEnds.getTime() > now;
-      const plan: UserRow['plan'] = paidActive
+      const periodLive = !periodEnd || periodEnd.getTime() > now;
+      // Trial now lives on the Stripe subscription (Pro checkout), not the user
+      // row. A live `trialing` sub = on trial; a live `active` sub = paid Pro.
+      const subTrialing = status === SubscriptionStatus.TRIALING && periodLive;
+      const subActive = status === SubscriptionStatus.ACTIVE && periodLive;
+      const plan: UserRow['plan'] = subActive
         ? 'pro'
-        : trialActive
+        : subTrialing
           ? 'trial'
           : 'free';
       return {

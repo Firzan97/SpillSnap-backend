@@ -8,9 +8,7 @@ import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User, Receipt, Subscription, AiUsage]),
-  ],
+  imports: [TypeOrmModule.forFeature([User, Receipt, Subscription, AiUsage])],
   controllers: [AdminController],
   providers: [AdminService],
 })

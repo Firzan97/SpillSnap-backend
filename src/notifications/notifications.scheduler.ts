@@ -111,10 +111,18 @@ export class NotificationsScheduler {
     for (const user of users) {
       const rows = await this.receipts
         .createQueryBuilder('r')
-        .select(['r.category AS category', 'r.amount AS amount', 'r.base_amount AS base_amount'])
+        .select([
+          'r.category AS category',
+          'r.amount AS amount',
+          'r.base_amount AS base_amount',
+        ])
         .where('r.user_id = :id', { id: user.id })
         .andWhere('r.receipt_date >= :weekAgo', { weekAgo })
-        .getRawMany<{ category: string; amount: string; base_amount: string | null }>();
+        .getRawMany<{
+          category: string;
+          amount: string;
+          base_amount: string | null;
+        }>();
 
       const count = rows.length;
       const currency = user.baseCurrency ?? 'MYR';
@@ -128,7 +136,9 @@ export class NotificationsScheduler {
         total += amt;
         byCategory.set(r.category, (byCategory.get(r.category) ?? 0) + amt);
       }
-      const topCategory = [...byCategory.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+      const topCategory = [...byCategory.entries()].sort(
+        (a, b) => b[1] - a[1],
+      )[0]?.[0];
       const topLabel = topCategory
         ? topCategory.charAt(0).toUpperCase() + topCategory.slice(1)
         : null;
@@ -146,7 +156,12 @@ export class NotificationsScheduler {
         emoji: '🧾',
         title: 'Your week in receipts',
         body,
-        data: { count, total: Number(total.toFixed(2)), currency, topCategory: topCategory ?? null },
+        data: {
+          count,
+          total: Number(total.toFixed(2)),
+          currency,
+          topCategory: topCategory ?? null,
+        },
         prefKey: 'weekly',
       });
       sent++;

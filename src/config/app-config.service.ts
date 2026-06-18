@@ -27,7 +27,9 @@ export class AppConfigService {
       this.cache.set(key, value);
       return value;
     } catch (err) {
-      this.logger.error(`Failed reading config "${key}": ${(err as Error).message}`);
+      this.logger.error(
+        `Failed reading config "${key}": ${(err as Error).message}`,
+      );
       return fallback;
     }
   }

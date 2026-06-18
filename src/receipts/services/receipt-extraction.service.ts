@@ -190,10 +190,10 @@ export class ReceiptExtractionService {
       );
     }
     this.client = new Anthropic({ apiKey });
-    this.maxEdgePx =
-      config.get<number>('RECEIPT_MAX_EDGE_PX') ?? MAX_EDGE_PX;
+    this.maxEdgePx = config.get<number>('RECEIPT_MAX_EDGE_PX') ?? MAX_EDGE_PX;
     this.confidenceThreshold =
-      config.get<number>('RECEIPT_CONFIDENCE_THRESHOLD') ?? CONFIDENCE_THRESHOLD;
+      config.get<number>('RECEIPT_CONFIDENCE_THRESHOLD') ??
+      CONFIDENCE_THRESHOLD;
   }
 
   /**

@@ -100,15 +100,20 @@ export class AnalyticsService {
         .filter((r) => new Date(r.receiptDate) < start)
         .reduce((s, r) => s + baseAmt(r), 0);
       vsPrevPct =
-        prevSpend === 0 ? null : round2(((spend - prevSpend) / prevSpend) * 100);
+        prevSpend === 0
+          ? null
+          : round2(((spend - prevSpend) / prevSpend) * 100);
     }
 
     // ── Monthly trend (ordered, zero-filled) ──────────────────────────────────
-    const firstDate = receipts[0]
-      ? new Date(receipts[0].receiptDate)
-      : now;
+    const firstDate = receipts[0] ? new Date(receipts[0].receiptDate) : now;
     const trendStart = start ?? startOfMonth(firstDate);
-    const monthlyTrend = this.buildMonthlyTrend(receipts, trendStart, now, baseAmt);
+    const monthlyTrend = this.buildMonthlyTrend(
+      receipts,
+      trendStart,
+      now,
+      baseAmt,
+    );
 
     // ── Categories ────────────────────────────────────────────────────────────
     const catTotals = new Map<string, { amount: number; count: number }>();
@@ -130,7 +135,10 @@ export class AnalyticsService {
       }));
 
     // ── Top merchants ─────────────────────────────────────────────────────────
-    const merchantTotals = new Map<string, { amount: number; visits: number }>();
+    const merchantTotals = new Map<
+      string,
+      { amount: number; visits: number }
+    >();
     for (const r of receipts) {
       const cur = merchantTotals.get(r.merchant) ?? { amount: 0, visits: 0 };
       cur.amount += baseAmt(r);
@@ -170,7 +178,9 @@ export class AnalyticsService {
       eligibleAmount: round2(eligibleAmount),
       eligibleCount: eligible.length,
       totalCount: receiptCount,
-      pct: receiptCount ? Math.round((eligible.length / receiptCount) * 100) : 0,
+      pct: receiptCount
+        ? Math.round((eligible.length / receiptCount) * 100)
+        : 0,
     };
 
     // ── Highlights ────────────────────────────────────────────────────────────

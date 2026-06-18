@@ -43,7 +43,10 @@ export class PricingController {
   })
   @ApiResponse({ status: 200, description: 'Plan catalog' })
   getPlans(): Promise<PricingPayload> {
-    return this.appConfig.get<PricingPayload>(PRICING_CONFIG_KEY, pricingDefault());
+    return this.appConfig.get<PricingPayload>(
+      PRICING_CONFIG_KEY,
+      pricingDefault(),
+    );
   }
 }
 

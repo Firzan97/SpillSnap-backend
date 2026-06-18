@@ -92,7 +92,7 @@ export class EntitlementService {
       // so the account page reads "trialing" until the trial date passes, then
       // "active". `subscribed` (below) distinguishes a paying card-on-file user
       // from a card-less free trial regardless of this status.
-      status = sub!.status;
+      status = sub.status;
     } else if (trialActive) {
       status = SubscriptionStatus.TRIALING; // free, card-less app trial only
     } else {

@@ -42,7 +42,8 @@ export class AdminController {
   @Get('users')
   @ApiOperation({
     summary: 'Recent users',
-    description: 'Most-recent registrations with resolved plan (pro/trial/free).',
+    description:
+      'Most-recent registrations with resolved plan (pro/trial/free).',
   })
   @ApiResponse({ status: 200, description: 'User rows' })
   users(@Query('limit') limit?: string) {
@@ -93,13 +94,17 @@ export class AdminController {
 
   // ── Plan limits (admin-editable) ────────────────────────────────────────────
   @Get('limits')
-  @ApiOperation({ summary: 'Get effective plan limits + default + override flag' })
+  @ApiOperation({
+    summary: 'Get effective plan limits + default + override flag',
+  })
   getLimits() {
     return this.adminService.getLimits();
   }
 
   @Put('limits')
-  @ApiOperation({ summary: 'Save admin-edited plan limits (free monthly scans, trial days)' })
+  @ApiOperation({
+    summary: 'Save admin-edited plan limits (free monthly scans, trial days)',
+  })
   @ApiResponse({ status: 200, description: 'Saved limits' })
   @ApiResponse({ status: 400, description: 'Invalid limits payload' })
   async setLimits(@Body() payload: AppLimits) {

@@ -21,6 +21,12 @@ import { SubscriptionEvent } from './entities/subscription-event.entity';
 import { EntitlementService } from './entitlement.service';
 import { StripeService } from './stripe.service';
 import { WhatsappSenderService } from '../whatsapp/whatsapp-sender.service';
+import { AppConfigService } from '../config/app-config.service';
+import {
+  PRICING_CONFIG_KEY,
+  PricingPayload,
+  pricingDefault,
+} from './plans.config';
 
 // Stripe → local status mapping.
 const STATUS_MAP: Record<string, SubscriptionStatus> = {
@@ -46,6 +52,7 @@ export class BillingService {
     private readonly entitlements: EntitlementService,
     private readonly config: ConfigService,
     private readonly whatsapp: WhatsappSenderService,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   private appUrl(): string {
@@ -77,7 +84,8 @@ export class BillingService {
   } {
     const base = this.webUrl();
     const isMobile =
-      platform === CheckoutPlatform.IOS || platform === CheckoutPlatform.ANDROID;
+      platform === CheckoutPlatform.IOS ||
+      platform === CheckoutPlatform.ANDROID;
     const q = isMobile ? '?app=1' : '';
     return {
       successUrl: `${base}/billing/success${q}`,
@@ -118,18 +126,21 @@ export class BillingService {
       status: existing?.status ?? SubscriptionStatus.TRIALING,
     });
 
-    // The 7-day free trial is once per user. Only defer billing if the app
-    // trial is STILL running AND the user has never had a Stripe subscription
-    // before (a prior subscription id means the trial was already consumed).
-    // An expired-trial user upgrading later is billed immediately — no second
-    // free trial. (The Stripe Price must NOT have its own default trial set,
-    // or it would apply regardless; trials are controlled here via trial_end.)
+    // Free trial is granted HERE, on first Pro checkout (card collected now,
+    // first charge deferred until the trial ends), and is once per user. A user
+    // who has had a Stripe subscription before is billed immediately — no second
+    // free trial. The length is admin-editable via the pricing config; 0 days
+    // disables it. (The Stripe Price must NOT have its own default trial set, or
+    // it would apply regardless; trials are controlled here via trial_end.)
     const trialAlreadyUsed = !!existing?.stripeSubscriptionId;
-    const appTrialActive =
-      !!user.trialEndsAt && new Date(user.trialEndsAt) > new Date();
+    const pricing = await this.appConfig.get<PricingPayload>(
+      PRICING_CONFIG_KEY,
+      pricingDefault(),
+    );
+    const trialDays = pricing.trialDays ?? 0;
     const trialEnd =
-      !trialAlreadyUsed && appTrialActive
-        ? Math.floor(new Date(user.trialEndsAt!).getTime() / 1000)
+      !trialAlreadyUsed && trialDays > 0
+        ? Math.floor(Date.now() / 1000) + trialDays * 86_400
         : undefined;
 
     const { successUrl, cancelUrl } = this.billingReturnUrls(dto.platform);

@@ -4,12 +4,6 @@ import { createClerkClient, type ClerkClient } from '@clerk/backend';
 import { UsersService } from '../users/users.service';
 import { AuthProvider, User } from '../users/entities/user.entity';
 import { WhatsappSenderService } from '../whatsapp/whatsapp-sender.service';
-import { AppConfigService } from '../config/app-config.service';
-import {
-  AppLimits,
-  DEFAULT_LIMITS,
-  LIMITS_CONFIG_KEY,
-} from '../billing/plans.config';
 
 export interface PublicUser {
   id: string;
@@ -49,7 +43,6 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly config: ConfigService,
     private readonly whatsapp: WhatsappSenderService,
-    private readonly appConfig: AppConfigService,
   ) {
     this.clerk = createClerkClient({
       secretKey: config.getOrThrow<string>('CLERK_SECRET_KEY'),
@@ -76,7 +69,10 @@ export class AuthService {
       `${payload.sub}@no-email.clerk`
     ).toLowerCase();
     const name =
-      [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ').trim() ||
+      [clerkUser.firstName, clerkUser.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
       clerkUser.username ||
       email.split('@')[0] ||
       'SpillSnap User';
@@ -106,15 +102,9 @@ export class AuthService {
       });
     }
 
-    // Trial length is admin-configurable (defaults to 5 days). New users get a
-    // one-time free trial; afterwards they're on the Free plan.
-    const limits = await this.appConfig.get<AppLimits>(
-      LIMITS_CONFIG_KEY,
-      DEFAULT_LIMITS,
-    );
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + limits.trialDays);
-
+    // New users start on the Free plan with NO trial. A trial is only ever
+    // granted by Stripe AFTER the user starts a paid subscription (the webhook
+    // sets the subscription's `trialing` status); signup never grants Pro.
     let created: User;
     try {
       created = await this.usersService.create({
@@ -125,7 +115,7 @@ export class AuthService {
         authProvider,
         providerId: payload.sub,
         phone,
-        trialEndsAt,
+        trialEndsAt: null,
       });
     } catch (e) {
       // On first sign-in the client fires several authed requests at once

@@ -50,7 +50,9 @@ export class AiUsageService {
   computeCost(input: AiUsageInput): number {
     const rate = MODEL_RATES[input.model];
     if (!rate) {
-      this.logger.warn(`No price for model "${input.model}"; cost recorded as 0`);
+      this.logger.warn(
+        `No price for model "${input.model}"; cost recorded as 0`,
+      );
       return 0;
     }
     const cacheRead = input.cacheReadTokens ?? 0;

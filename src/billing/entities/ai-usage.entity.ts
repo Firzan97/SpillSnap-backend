@@ -40,7 +40,13 @@ export class AiUsage {
   @Column({ name: 'cache_creation_tokens', type: 'int', default: 0 })
   cacheCreationTokens: number;
 
-  @Column({ name: 'cost_usd', type: 'numeric', precision: 12, scale: 6, default: 0 })
+  @Column({
+    name: 'cost_usd',
+    type: 'numeric',
+    precision: 12,
+    scale: 6,
+    default: 0,
+  })
   costUsd: number;
 
   @Column({ name: 'duration_ms', type: 'int', nullable: true })

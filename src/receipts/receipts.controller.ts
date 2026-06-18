@@ -47,7 +47,7 @@ export class ReceiptsController {
   // POST /receipts/capture
   @Post('capture')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(DailyQuotaGuard) // post-trial Free: 1 upload/day, atomically reserved
+  @UseGuards(DailyQuotaGuard) // Free: 15 uploads/month, atomically reserved
   @UseInterceptors(FilesInterceptor('images', MAX_IMAGES))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -86,7 +86,7 @@ export class ReceiptsController {
   })
   @ApiResponse({
     status: 402,
-    description: 'Free daily upload limit reached - upgrade to Pro',
+    description: 'Free monthly upload limit reached - upgrade to Pro',
   })
   @ApiResponse({
     status: 422,

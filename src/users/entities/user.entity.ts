@@ -87,7 +87,7 @@ export class User {
   role: UserRole;
 
   @Column({ name: 'trial_ends_at', nullable: true, type: 'timestamptz' })
-  trialEndsAt: Date;
+  trialEndsAt: Date | null;
 
   @Column({ name: 'streak_count', default: 0 })
   streakCount: number;

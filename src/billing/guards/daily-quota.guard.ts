@@ -12,10 +12,10 @@ import { UsageService } from '../usage.service';
 import { AppConfigService } from '../../config/app-config.service';
 
 /**
- * Enforces the post-trial Free limit of 1 receipt upload/day. Pro and in-trial
- * users pass straight through. For everyone else the slot is reserved
- * atomically here, so the OCR/extraction work only runs when within quota and
- * concurrent requests can't both slip past.
+ * Enforces the Free limit of 15 receipt uploads/month. Pro users (paid or in a
+ * Stripe-granted trial) pass straight through. For everyone else the slot is
+ * reserved atomically here, so the OCR/extraction work only runs when within
+ * quota and concurrent requests can't both slip past.
  *
  * Returns HTTP 402 Payment Required when the limit is hit → the client shows
  * the upgrade paywall.

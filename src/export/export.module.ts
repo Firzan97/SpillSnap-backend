@@ -8,7 +8,11 @@ import { ExportController } from './export.controller';
 import { ExportService } from './export.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Export, Receipt]), UsersModule, BillingModule],
+  imports: [
+    TypeOrmModule.forFeature([Export, Receipt]),
+    UsersModule,
+    BillingModule,
+  ],
   controllers: [ExportController],
   providers: [ExportService],
 })

@@ -157,14 +157,12 @@ export class ExportService {
    * (a `simple-array` text column, not jsonb) are intersected in JS so partial
    * matches like "foo" vs "foobar" can't leak in.
    */
-  private async fetchFiltered(
-    user: User,
-    f: ExportFilter,
-  ): Promise<Receipt[]> {
+  private async fetchFiltered(user: User, f: ExportFilter): Promise<Receipt[]> {
     const qb = this.receiptRepo
       .createQueryBuilder('r')
       .where('r.user_id = :userId', { userId: user.id });
-    if (f.dateFrom) qb.andWhere('r.receipt_date >= :from', { from: f.dateFrom });
+    if (f.dateFrom)
+      qb.andWhere('r.receipt_date >= :from', { from: f.dateFrom });
     if (f.dateTo) qb.andWhere('r.receipt_date <= :to', { to: f.dateTo });
     if (f.categories?.length)
       qb.andWhere('r.category IN (:...categories)', {

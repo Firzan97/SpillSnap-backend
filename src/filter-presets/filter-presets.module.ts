@@ -7,7 +7,11 @@ import { FilterPresetsController } from './filter-presets.controller';
 import { FilterPresetsService } from './filter-presets.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FilterPreset]), UsersModule, BillingModule],
+  imports: [
+    TypeOrmModule.forFeature([FilterPreset]),
+    UsersModule,
+    BillingModule,
+  ],
   controllers: [FilterPresetsController],
   providers: [FilterPresetsService],
 })

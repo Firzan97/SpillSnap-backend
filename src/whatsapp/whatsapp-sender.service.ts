@@ -69,9 +69,7 @@ export class WhatsappSenderService {
       template: {
         name: templateName,
         language: { code: languageCode },
-        components: parameters.length
-          ? [{ type: 'body', parameters }]
-          : [],
+        components: parameters.length ? [{ type: 'body', parameters }] : [],
       },
     });
   }
@@ -88,12 +86,15 @@ export class WhatsappSenderService {
    * language plus the user's first name in the named {{customer_name}} variable.
    */
   async sendWelcome(to: string, firstName: string): Promise<boolean> {
-    const template = this.config.get<string>('WHATSAPP_WELCOME_TEMPLATE')?.trim();
+    const template = this.config
+      .get<string>('WHATSAPP_WELCOME_TEMPLATE')
+      ?.trim();
     if (!template) return false;
     if (template === 'hello_world') {
       return this.sendTemplate(to, 'hello_world', 'en_US', []);
     }
-    const lang = this.config.get<string>('WHATSAPP_TEMPLATE_LANG')?.trim() || 'en';
+    const lang =
+      this.config.get<string>('WHATSAPP_TEMPLATE_LANG')?.trim() || 'en';
     return this.sendTemplate(to, template, lang, { customer_name: firstName });
   }
 

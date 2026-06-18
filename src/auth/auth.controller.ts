@@ -25,7 +25,8 @@ export class AuthController {
   @UseGuards(ClerkAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Verify the Clerk session token, sync the user, return the profile',
+    summary:
+      'Verify the Clerk session token, sync the user, return the profile',
   })
   @ApiResponse({ status: 200, description: 'Local user profile' })
   @ApiResponse({ status: 401, description: 'Missing or invalid Clerk token' })

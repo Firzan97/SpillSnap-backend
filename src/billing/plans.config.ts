@@ -36,15 +36,15 @@ export const PRO_FEATURES: PlanFeatures = {
 export const LIMITS_CONFIG_KEY = 'limits';
 
 export interface AppLimits {
-  /** Post-trial Free tier: receipts per calendar month. */
+  /** Free tier: receipts per calendar month. */
   freeMonthlyScans: number;
-  /** Length (days) of the no-card free trial granted at signup. */
+  /** Length (days) of the free trial granted on Pro checkout (0 = none). */
   trialDays: number;
 }
 
 export const DEFAULT_LIMITS: AppLimits = {
   freeMonthlyScans: 15,
-  trialDays: 5,
+  trialDays: 7,
 };
 
 /** @deprecated use AppLimits.freeMonthlyScans (kept for any static reference). */
@@ -94,7 +94,12 @@ export const PRICING_PLANS: PricingPlan[] = [
       'Streaks & leaderboards',
       'Manual tags & notes',
     ],
-    notIncluded: ['Unlimited scans', 'CSV data export', 'Saved filters & filtered export', 'LHDN tax tagging'],
+    notIncluded: [
+      'Unlimited scans',
+      'CSV data export',
+      'Saved filters & filtered export',
+      'LHDN tax tagging',
+    ],
   },
   {
     id: PlanId.PRO,
@@ -133,8 +138,10 @@ export const PRICING_PLANS: PricingPlan[] = [
 export const PRICING_NOTES = {
   currency: 'MYR',
   sstIncludedPct: 8,
+  // Trial is granted on Pro CHECKOUT (card required), not at signup. Once per
+  // user. Admin-editable via the pricing config; 0 disables the trial.
   trialDays: TRIAL_DAYS,
-  note: 'Prices in MYR · Includes 8% SST · First 5 days free · Cancel anytime',
+  note: `Prices in MYR · Includes 8% SST · First ${TRIAL_DAYS} days free · Cancel anytime`,
 };
 
 // ── Dynamic (admin-editable) pricing ─────────────────────────────────────────

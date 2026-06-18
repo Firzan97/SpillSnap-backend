@@ -21,11 +21,13 @@ function makeService(sub: Subscription | null, uploadsThisMonth: number) {
 
 const daysFromNow = (d: number) => new Date(Date.now() + d * 86_400_000);
 const userWithTrial = (end: Date | null) =>
-  ({ id: 'u1', trialEndsAt: end } as unknown as User);
+  ({ id: 'u1', trialEndsAt: end }) as unknown as User;
 
 describe('EntitlementService.resolve', () => {
   it('during trial → full Pro, unlimited', async () => {
-    const ent = await makeService(null, 0).resolve(userWithTrial(daysFromNow(4)));
+    const ent = await makeService(null, 0).resolve(
+      userWithTrial(daysFromNow(4)),
+    );
     expect(ent.isPro).toBe(true);
     expect(ent.plan).toBe(PlanId.PRO);
     expect(ent.status).toBe(SubscriptionStatus.TRIALING);
@@ -35,7 +37,9 @@ describe('EntitlementService.resolve', () => {
   });
 
   it('trial expired, no subscription → Free with monthly scan limit', async () => {
-    const ent = await makeService(null, 0).resolve(userWithTrial(daysFromNow(-1)));
+    const ent = await makeService(null, 0).resolve(
+      userWithTrial(daysFromNow(-1)),
+    );
     expect(ent.isPro).toBe(false);
     expect(ent.plan).toBe(PlanId.FREE);
     expect(ent.monthlyUploadLimit).toBe(DEFAULT_LIMITS.freeMonthlyScans); // 15
@@ -59,7 +63,9 @@ describe('EntitlementService.resolve', () => {
       stripeSubscriptionId: 'sub_123',
       currentPeriodEnd: daysFromNow(20),
     } as unknown as Subscription;
-    const ent = await makeService(sub, 5).resolve(userWithTrial(daysFromNow(-30)));
+    const ent = await makeService(sub, 5).resolve(
+      userWithTrial(daysFromNow(-30)),
+    );
     expect(ent.isPro).toBe(true);
     expect(ent.plan).toBe(PlanId.PRO);
     expect(ent.monthlyUploadLimit).toBeNull();
@@ -73,7 +79,9 @@ describe('EntitlementService.resolve', () => {
       stripeSubscriptionId: null,
       currentPeriodEnd: null,
     } as unknown as Subscription;
-    const ent = await makeService(sub, 0).resolve(userWithTrial(daysFromNow(-30)));
+    const ent = await makeService(sub, 0).resolve(
+      userWithTrial(daysFromNow(-30)),
+    );
     expect(ent.isPro).toBe(false); // no real subscription yet
     expect(ent.plan).toBe(PlanId.FREE);
   });
