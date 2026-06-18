@@ -1,6 +1,6 @@
 // PM2 process config — single fork-mode instance.
 // Start:   pm2 start ecosystem.config.js
-// Reload:  pm2 reload spendsnap-api   (done by deploy/deploy.sh)
+// Reload:  pm2 reload spillsnap-api   (done by deploy/deploy.sh)
 // NOTE: fork mode + 1 instance is intentional — the app has @Cron jobs
 // (notifications, cleanup) that must run exactly once. Switching to cluster
 // mode would fire every cron in every worker; guard them by NODE_APP_INSTANCE
@@ -8,7 +8,7 @@
 module.exports = {
   apps: [
     {
-      name: 'spillnap-api',
+      name: 'spillsnap-api',
       cwd: '/opt/spillsnap-backend',
       script: 'dist/main.js',
       instances: 1,
