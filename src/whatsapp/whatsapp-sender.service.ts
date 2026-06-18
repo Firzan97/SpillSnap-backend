@@ -42,15 +42,26 @@ export class WhatsappSenderService {
 
   /**
    * Send an approved message template (the only way to message a user cold,
-   * outside the 24h window). `bodyParams` fill {{1}}, {{2}}… in order.
-   * Returns true only if Meta accepted the message.
+   * outside the 24h window). `bodyParams` fill the body variables.
+   *
+   * Pass a string[] for positional templates ({{1}}, {{2}}…) or a
+   * Record<name,value> for named templates ({{customer_name}}…); Meta needs
+   * `parameter_name` on each param for the named form. Returns true only if
+   * Meta accepted the message.
    */
   async sendTemplate(
     to: string,
     templateName: string,
     languageCode: string,
-    bodyParams: string[] = [],
+    bodyParams: string[] | Record<string, string> = [],
   ): Promise<boolean> {
+    const parameters = Array.isArray(bodyParams)
+      ? bodyParams.map((text) => ({ type: 'text', text }))
+      : Object.entries(bodyParams).map(([name, text]) => ({
+          type: 'text',
+          parameter_name: name,
+          text,
+        }));
     return this.post({
       messaging_product: 'whatsapp',
       to,
@@ -58,13 +69,8 @@ export class WhatsappSenderService {
       template: {
         name: templateName,
         language: { code: languageCode },
-        components: bodyParams.length
-          ? [
-              {
-                type: 'body',
-                parameters: bodyParams.map((text) => ({ type: 'text', text })),
-              },
-            ]
+        components: parameters.length
+          ? [{ type: 'body', parameters }]
           : [],
       },
     });
@@ -79,7 +85,7 @@ export class WhatsappSenderService {
    * `hello_world` is Meta's universal sample template — it has NO body variable
    * and only exists in `en_US`. Special-case it so a dev can smoke-test delivery
    * before a branded template is approved; any other template gets the configured
-   * language plus the user's first name in {{1}}.
+   * language plus the user's first name in the named {{customer_name}} variable.
    */
   async sendWelcome(to: string, firstName: string): Promise<boolean> {
     const template = this.config.get<string>('WHATSAPP_WELCOME_TEMPLATE')?.trim();
@@ -88,7 +94,7 @@ export class WhatsappSenderService {
       return this.sendTemplate(to, 'hello_world', 'en_US', []);
     }
     const lang = this.config.get<string>('WHATSAPP_TEMPLATE_LANG')?.trim() || 'en';
-    return this.sendTemplate(to, template, lang, [firstName]);
+    return this.sendTemplate(to, template, lang, { customer_name: firstName });
   }
 
   async downloadMedia(
