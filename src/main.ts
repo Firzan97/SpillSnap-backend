@@ -8,7 +8,8 @@ async function bootstrap() {
   // rawBody: true keeps the unparsed body so the Stripe webhook can verify its
   // signature against the exact bytes Stripe signed.
   const app = await NestFactory.create(AppModule, { rawBody: true });
-
+  console.log('cwd:', process.cwd());
+  console.log('NODE_ENV:', process.env);
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
