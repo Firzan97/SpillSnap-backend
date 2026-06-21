@@ -7,6 +7,7 @@ import { BillingInterval, PlanId } from './entities/subscription.entity';
 export interface PlanFeatures {
   unlimitedScans: boolean;
   lhdnTagging: boolean;
+  advancedAnalytics: boolean;
   multiCurrency: boolean;
   cloudArchive: boolean;
   leaderboard: boolean;
@@ -14,7 +15,8 @@ export interface PlanFeatures {
 
 export const FREE_FEATURES: PlanFeatures = {
   unlimitedScans: false,
-  lhdnTagging: false,
+  lhdnTagging: true, // tagging + relief summary is the free tax hook; export is Pro
+  advancedAnalytics: false, // home dashboard is free; deep trends are Pro
   multiCurrency: false,
   cloudArchive: false,
   leaderboard: true, // viewing the leaderboard stays free
@@ -23,6 +25,7 @@ export const FREE_FEATURES: PlanFeatures = {
 export const PRO_FEATURES: PlanFeatures = {
   unlimitedScans: true,
   lhdnTagging: true,
+  advancedAnalytics: true,
   multiCurrency: true,
   cloudArchive: true,
   leaderboard: true,
@@ -99,14 +102,17 @@ export const PRICING_PLANS: PricingPlan[] = [
     features: [
       '15 receipt scans per month',
       'Auto-OCR & categorisation',
+      'LHDN tax tagging & relief summary',
+      'Spending dashboard',
       'Streaks & leaderboards',
       'Manual tags & notes',
     ],
     notIncluded: [
       'Unlimited scans',
-      'CSV data export',
+      'Advanced analytics & trends',
+      'CSV & e-Filing export',
       'Saved filters & filtered export',
-      'LHDN tax tagging',
+      'Multi-currency',
     ],
   },
   {
@@ -132,9 +138,10 @@ export const PRICING_PLANS: PricingPlan[] = [
       },
     ],
     features: [
+      'Everything in Free',
       'Unlimited scans · iOS + Android',
-      'Export your data to CSV',
-      'LHDN tax tagging + e-Filing export',
+      'Advanced analytics & spending trends',
+      'CSV & e-Filing export',
       'Saved filters & filtered export',
       'Multi-currency (RM, SGD, USD)',
       'WhatsApp receipt capture',
