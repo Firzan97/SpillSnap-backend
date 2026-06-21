@@ -67,6 +67,23 @@ export class AiUsageService {
   }
 
   /**
+   * How many app scans this user has run today (Asia/Kuala_Lumpur). Each capture
+   * records one app-channel usage row, so this doubles as a per-day scan count —
+   * used to rate-limit free users now that scanning no longer spends quota.
+   */
+  async scansToday(userId: string): Promise<number> {
+    const TZ = 'Asia/Kuala_Lumpur';
+    return this.repo
+      .createQueryBuilder('a')
+      .where('a.user_id = :userId', { userId })
+      .andWhere('a.channel = :channel', { channel: ReceiptSource.APP })
+      .andWhere(
+        `(a.created_at AT TIME ZONE '${TZ}')::date = (now() AT TIME ZONE '${TZ}')::date`,
+      )
+      .getCount();
+  }
+
+  /**
    * Persist one usage row. Never throws into the caller's request path — a
    * failed insert is logged and swallowed so receipt extraction still succeeds.
    */

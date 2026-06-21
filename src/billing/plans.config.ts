@@ -47,6 +47,14 @@ export const DEFAULT_LIMITS: AppLimits = {
   trialDays: 5,
 };
 
+/**
+ * Anti-abuse ceiling on how many receipts a Free user can *scan* (run through
+ * AI extraction) per day. Saving — not scanning — is what spends the monthly
+ * quota now, but each scan still costs an AI call, so this caps the cost a free
+ * user can run up. Generous enough that a real user never hits it; Pro bypasses.
+ */
+export const FREE_DAILY_SCAN_CAP = 30;
+
 /** @deprecated use AppLimits.freeMonthlyScans (kept for any static reference). */
 export const FREE_MONTHLY_UPLOAD_LIMIT = DEFAULT_LIMITS.freeMonthlyScans;
 

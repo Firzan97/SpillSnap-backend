@@ -28,6 +28,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { DailyQuotaGuard } from '../billing/guards/daily-quota.guard';
+import { ScanRateLimitGuard } from '../billing/guards/scan-rate-limit.guard';
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
@@ -47,7 +48,7 @@ export class ReceiptsController {
   // POST /receipts/capture
   @Post('capture')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(DailyQuotaGuard) // Free: 15 uploads/month, atomically reserved
+  @UseGuards(ScanRateLimitGuard) // Free: anti-abuse 30 scans/day (quota is spent on save, not scan)
   @UseInterceptors(FilesInterceptor('images', MAX_IMAGES))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -85,8 +86,9 @@ export class ReceiptsController {
     description: 'Missing or invalid Clerk token',
   })
   @ApiResponse({
-    status: 402,
-    description: 'Free monthly upload limit reached - upgrade to Pro',
+    status: 429,
+    description:
+      'Daily scan limit reached (Free anti-abuse cap) - try tomorrow or upgrade to Pro',
   })
   @ApiResponse({
     status: 422,
@@ -132,16 +134,21 @@ export class ReceiptsController {
   // POST /receipts
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(DailyQuotaGuard) // Free: 15 saved receipts/month, atomically reserved on save
   @ApiOperation({
     summary: 'Save a confirmed receipt',
     description:
-      'Persists the (possibly user-edited) extracted fields from the capture step and bumps the daily snap streak.',
+      'Persists the (possibly user-edited) extracted fields from the capture step and bumps the daily snap streak. Saving is what spends the Free monthly quota (scanning is free, capped separately for abuse).',
   })
   @ApiResponse({ status: 201, description: 'Receipt saved' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({
     status: 401,
     description: 'Missing or invalid Clerk token',
+  })
+  @ApiResponse({
+    status: 402,
+    description: 'Free monthly save limit reached - upgrade to Pro',
   })
   create(@CurrentUser() user: User, @Body() dto: CreateReceiptDto) {
     return this.receiptsService.create(user, dto);
