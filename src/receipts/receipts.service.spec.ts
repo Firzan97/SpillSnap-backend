@@ -15,7 +15,6 @@ import {
 } from './entities/receipt.entity';
 import { StorageService } from './services/storage.service';
 import { ReceiptExtractionService } from './services/receipt-extraction.service';
-import { UsageService } from '../billing/usage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CurrencyService } from '../currency/currency.service';
 
@@ -46,7 +45,6 @@ describe('ReceiptsService', () => {
   };
   let extraction: { extract: jest.Mock };
   let users: { update: jest.Mock };
-  let usage: { refund: jest.Mock };
   let notifications: { notify: jest.Mock };
 
   beforeEach(async () => {
@@ -87,7 +85,6 @@ describe('ReceiptsService', () => {
       })),
     };
     users = { update: jest.fn() };
-    usage = { refund: jest.fn() };
     notifications = { notify: jest.fn() };
 
     const mod = await Test.createTestingModule({
@@ -97,7 +94,6 @@ describe('ReceiptsService', () => {
         { provide: StorageService, useValue: storage },
         { provide: ReceiptExtractionService, useValue: extraction },
         { provide: UsersService, useValue: users },
-        { provide: UsageService, useValue: usage },
         { provide: NotificationsService, useValue: notifications },
         {
           provide: CurrencyService,
@@ -134,7 +130,7 @@ describe('ReceiptsService', () => {
       });
     });
 
-    it('rejects non-receipts, refunds the quota slot, and never stores the image', async () => {
+    it('rejects non-receipts and never stores the image', async () => {
       extraction.extract.mockResolvedValueOnce({
         isReceipt: false,
         rejectReason: 'This looks like a selfie, not a receipt',
@@ -144,7 +140,8 @@ describe('ReceiptsService', () => {
         UnprocessableEntityException,
       );
 
-      expect(usage.refund).toHaveBeenCalledWith('u1');
+      // Capture no longer reserves quota (it's spent on save), so there's
+      // nothing to refund — it just must not store the rejected image.
       expect(storage.uploadReceiptImage).not.toHaveBeenCalled();
     });
   });
