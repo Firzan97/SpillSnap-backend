@@ -130,7 +130,7 @@ export class WhatsappService {
         await this.sender.sendText(
           from,
           `${firstName ? firstName + ', uploading' : 'Uploading'} receipts on WhatsApp is a SpillSnap Pro feature. ` +
-            'Start your 7-day free trial — no card needed — and snap unlimited receipts here:\n' +
+            'Start your 5-day free trial — no card needed — and snap unlimited receipts here:\n' +
             'https://spillsnap.com/pricing',
         );
         return;

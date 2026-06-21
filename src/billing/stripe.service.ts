@@ -74,7 +74,7 @@ export class StripeService {
   /**
    * Create a hosted Checkout session for a Pro subscription. `trialEnd` (unix
    * seconds) defers the first charge until the app trial ends, so the card is
-   * collected now but not billed during the 7-day trial.
+   * collected now but not billed during the 5-day trial.
    */
   async createCheckoutSession(params: {
     customerId: string;
