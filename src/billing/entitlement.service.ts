@@ -72,7 +72,11 @@ export class EntitlementService {
         sub.status === SubscriptionStatus.TRIALING) &&
       (!sub.currentPeriodEnd || sub.currentPeriodEnd > now);
 
-    const trialActive = !!user.trialEndsAt && new Date(user.trialEndsAt) > now;
+    // The free trial now lives on the Stripe subscription (status 'trialing'
+    // until trial_end), set by the checkout flow. `user.trialEndsAt` is the
+    // legacy card-less signup trial (no longer granted) — keep it as a fallback.
+    const effectiveTrialEnd = sub?.trialEndsAt ?? user.trialEndsAt ?? null;
+    const trialActive = !!effectiveTrialEnd && new Date(effectiveTrialEnd) > now;
 
     const isPro = paidActive || trialActive;
 
@@ -108,9 +112,9 @@ export class EntitlementService {
       uploadsThisMonth,
       monthlyUploadLimit,
       features: isPro ? PRO_FEATURES : FREE_FEATURES,
-      trialEndsAt: user.trialEndsAt ?? null,
-      trialDaysLeft: user.trialEndsAt
-        ? daysBetween(now, new Date(user.trialEndsAt))
+      trialEndsAt: effectiveTrialEnd,
+      trialDaysLeft: effectiveTrialEnd
+        ? daysBetween(now, new Date(effectiveTrialEnd))
         : 0,
       renewsAt: paidActive ? (sub?.currentPeriodEnd ?? null) : null,
       billingInterval: sub?.billingInterval ?? null,

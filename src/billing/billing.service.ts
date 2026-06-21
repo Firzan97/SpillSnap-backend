@@ -131,17 +131,15 @@ export class BillingService {
     // who has had a Stripe subscription before is billed immediately — no second
     // free trial. The length is admin-editable via the pricing config; 0 days
     // disables it. (The Stripe Price must NOT have its own default trial set, or
-    // it would apply regardless; trials are controlled here via trial_end.)
+    // it would apply regardless; trials are controlled here via trial_period_days.)
     const trialAlreadyUsed = !!existing?.stripeSubscriptionId;
     const pricing = await this.appConfig.get<PricingPayload>(
       PRICING_CONFIG_KEY,
       pricingDefault(),
     );
     const trialDays = pricing.trialDays ?? 0;
-    const trialEnd =
-      !trialAlreadyUsed && trialDays > 0
-        ? Math.floor(Date.now() / 1000) + trialDays * 86_400
-        : undefined;
+    const grantTrialDays =
+      !trialAlreadyUsed && trialDays > 0 ? trialDays : undefined;
 
     const { successUrl, cancelUrl } = this.billingReturnUrls(dto.platform);
     const url = await this.stripe.createCheckoutSession({
@@ -150,7 +148,7 @@ export class BillingService {
       userId: user.id,
       successUrl,
       cancelUrl,
-      trialEnd,
+      trialDays: grantTrialDays,
     });
     return { url };
   }
