@@ -21,7 +21,6 @@ import {
   ExtractedReceipt,
   ReceiptExtractionService,
 } from './services/receipt-extraction.service';
-import { UsageService } from '../billing/usage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CurrencyService } from '../currency/currency.service';
 
@@ -37,7 +36,6 @@ export class ReceiptsService {
     private readonly storage: StorageService,
     private readonly extraction: ReceiptExtractionService,
     private readonly usersService: UsersService,
-    private readonly usage: UsageService,
     private readonly notifications: NotificationsService,
     private readonly currency: CurrencyService,
   ) {}
@@ -59,20 +57,10 @@ export class ReceiptsService {
   // Accepts one or more images (sections of a long receipt). They're merged into
   // a single extracted receipt; the first image is stored as the primary thumbnail.
   async capture(user: User, files: { buffer: Buffer; mimetype: string }[]) {
-    try {
-      return await this.captureInner(user, files);
-    } catch (err) {
-      // The quota guard reserves today's Free slot up front. A failed scan -
-      // not-a-receipt, OCR/AI error, or storage failure - must NOT consume it;
-      // hand the slot back so only a successful scan counts against quota.
-      // Best-effort: a refund failure must never mask the original error.
-      try {
-        await this.usage.refund(user.id);
-      } catch {
-        /* ignore */
-      }
-      throw err;
-    }
+    // Scanning no longer spends the monthly quota — that's reserved on save
+    // (DailyQuotaGuard on POST /receipts). Capture is only rate-limited for
+    // abuse (ScanRateLimitGuard), so there's nothing to refund on failure.
+    return this.captureInner(user, files);
   }
 
   private async captureInner(

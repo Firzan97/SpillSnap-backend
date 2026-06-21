@@ -14,6 +14,7 @@ import { SubscriptionEvent } from './entities/subscription-event.entity';
 import { AiUsageService } from './ai-usage.service';
 import { EntitlementService } from './entitlement.service';
 import { DailyQuotaGuard } from './guards/daily-quota.guard';
+import { ScanRateLimitGuard } from './guards/scan-rate-limit.guard';
 import { StripeService } from './stripe.service';
 import { UsageService } from './usage.service';
 import { WhatsappSenderModule } from '../whatsapp/whatsapp-sender.module';
@@ -41,9 +42,16 @@ import { WhatsappSenderModule } from '../whatsapp/whatsapp-sender.module';
     AiUsageService,
     StripeService,
     DailyQuotaGuard,
+    ScanRateLimitGuard,
   ],
-  // Exported so ReceiptsModule can apply the quota guard on capture and record
-  // AI usage during extraction.
-  exports: [EntitlementService, UsageService, AiUsageService, DailyQuotaGuard],
+  // Exported so ReceiptsModule can apply the save-quota guard on create and the
+  // scan rate-limit on capture, and record AI usage during extraction.
+  exports: [
+    EntitlementService,
+    UsageService,
+    AiUsageService,
+    DailyQuotaGuard,
+    ScanRateLimitGuard,
+  ],
 })
 export class BillingModule {}

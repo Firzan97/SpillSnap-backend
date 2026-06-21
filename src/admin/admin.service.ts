@@ -484,6 +484,22 @@ export class AdminService {
     const totalUsers = await this.users.count();
     const inactiveToday = Math.max(0, totalUsers - activeToday);
 
+    // Scan-vs-save: each in-app scan records one app-channel ai_usage row; each
+    // saved receipt is an app-source row. The gap is scans the user ran (paid AI)
+    // but never saved — useful for spotting wasted cost / friction at the save
+    // step now that scanning no longer spends quota.
+    const scanRow = await this.aiUsage.query(
+      `SELECT COUNT(*)::int AS value FROM ai_usage WHERE channel = 'app'`,
+    );
+    const saveRow = await this.receipts.query(
+      `SELECT COUNT(*)::int AS value FROM receipts WHERE source = 'app'`,
+    );
+    const appScans = toInt(scanRow?.[0]?.value);
+    const appSaves = toInt(saveRow?.[0]?.value);
+    const scansWithoutSave = Math.max(0, appScans - appSaves);
+    const saveRate =
+      appScans > 0 ? Number(((appSaves / appScans) * 100).toFixed(1)) : 0;
+
     const round1 = (n: number) => Number(n.toFixed(1));
     return {
       totalReceipts: total,
@@ -500,6 +516,10 @@ export class AdminService {
       peakWeekday,
       activeToday,
       inactiveToday,
+      appScans,
+      appSaves,
+      scansWithoutSave,
+      saveRate,
     };
   }
 
