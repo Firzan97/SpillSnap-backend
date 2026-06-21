@@ -39,6 +39,23 @@ export class AdminController {
     return this.adminService.metrics();
   }
 
+  @Get('timeseries')
+  @ApiOperation({
+    summary: 'Ranged growth + revenue time-series',
+    description:
+      'Signups, new paying subscribers, and cumulative MRR over a range. ' +
+      'range = today | this_week | this_month | last_3_months | last_6_months | ' +
+      'this_year | last_year | custom (custom needs from/to ISO dates).',
+  })
+  @ApiResponse({ status: 200, description: 'Time-series payload' })
+  timeseries(
+    @Query('range') range = 'this_month',
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.adminService.timeseries(range, from, to);
+  }
+
   @Get('users')
   @ApiOperation({
     summary: 'Recent users',

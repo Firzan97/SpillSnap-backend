@@ -76,6 +76,144 @@ const PRO_MONTHLY =
 const PRO_ANNUAL =
   PRO?.prices.find((p) => p.interval === BillingInterval.ANNUAL)?.amount ?? 0;
 
+// ── Time-range helpers (Asia/Kuala_Lumpur, a fixed UTC+8 with no DST) ─────────
+const KL_TZ = 'Asia/Kuala_Lumpur';
+const KL_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+export type Granularity = 'hour' | 'day' | 'week' | 'month';
+
+/** KL-local calendar parts of an instant. */
+function klParts(d: Date) {
+  const k = new Date(d.getTime() + KL_OFFSET_MS);
+  return {
+    y: k.getUTCFullYear(),
+    m: k.getUTCMonth(),
+    d: k.getUTCDate(),
+    dow: k.getUTCDay(), // 0=Sun
+    h: k.getUTCHours(),
+  };
+}
+/** Build the UTC instant for a KL-local wall-clock time. */
+function klInstant(y: number, m: number, d: number, h = 0): Date {
+  return new Date(Date.UTC(y, m, d, h) - KL_OFFSET_MS);
+}
+
+/**
+ * Resolve a range key to a [from, to) window (UTC instants) + a sensible bucket
+ * granularity. Calendar-aware where it matters (this_month, this_year,
+ * last_year); rolling for the "last N months" keys.
+ */
+function resolveRange(
+  key: string,
+  fromIso?: string,
+  toIso?: string,
+): { from: Date; to: Date; gran: Granularity } {
+  const now = new Date();
+  const p = klParts(now);
+  const startOfTodayKL = klInstant(p.y, p.m, p.d);
+  const DAY = 24 * 60 * 60 * 1000;
+
+  switch (key) {
+    case 'today':
+      return { from: startOfTodayKL, to: now, gran: 'hour' };
+    case 'this_week': {
+      // Week starts Monday (KL).
+      const back = (p.dow + 6) % 7;
+      return {
+        from: new Date(startOfTodayKL.getTime() - back * DAY),
+        to: now,
+        gran: 'day',
+      };
+    }
+    case 'this_month':
+      return { from: klInstant(p.y, p.m, 1), to: now, gran: 'day' };
+    case 'last_3_months':
+      return {
+        from: new Date(startOfTodayKL.getTime() - 90 * DAY),
+        to: now,
+        gran: 'week',
+      };
+    case 'last_6_months':
+      return {
+        from: new Date(startOfTodayKL.getTime() - 180 * DAY),
+        to: now,
+        gran: 'week',
+      };
+    case 'this_year':
+      return { from: klInstant(p.y, 0, 1), to: now, gran: 'month' };
+    case 'last_year':
+      return {
+        from: klInstant(p.y - 1, 0, 1),
+        to: klInstant(p.y, 0, 1),
+        gran: 'month',
+      };
+    case 'custom': {
+      const from = fromIso ? new Date(fromIso) : startOfTodayKL;
+      const to = toIso ? new Date(toIso) : now;
+      const span = to.getTime() - from.getTime();
+      const gran: Granularity =
+        span <= 2 * DAY
+          ? 'hour'
+          : span <= 45 * DAY
+            ? 'day'
+            : span <= 200 * DAY
+              ? 'week'
+              : 'month';
+      return { from, to, gran };
+    }
+    default:
+      return { from: klInstant(p.y, p.m, 1), to: now, gran: 'day' };
+  }
+}
+
+/** Truncate an instant to the start of its KL bucket. */
+function truncKL(d: Date, gran: Granularity): Date {
+  const p = klParts(d);
+  if (gran === 'hour') return klInstant(p.y, p.m, p.d, p.h);
+  if (gran === 'day') return klInstant(p.y, p.m, p.d);
+  if (gran === 'month') return klInstant(p.y, p.m, 1);
+  // week → back to Monday
+  const back = (p.dow + 6) % 7;
+  return new Date(
+    klInstant(p.y, p.m, p.d).getTime() - back * 24 * 60 * 60 * 1000,
+  );
+}
+/** Label matching the SQL to_char() output so rows line up with buckets. */
+function bucketLabel(d: Date, gran: Granularity): string {
+  const p = klParts(d);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ymd = `${p.y}-${pad(p.m + 1)}-${pad(p.d)}`;
+  return gran === 'hour' ? `${ymd}T${pad(p.h)}:00` : ymd;
+}
+/** Ordered bucket list spanning [from, to) for the chosen granularity. */
+function buildBuckets(
+  from: Date,
+  to: Date,
+  gran: Granularity,
+): { start: Date; label: string }[] {
+  const out: { start: Date; label: string }[] = [];
+  let cur = truncKL(from, gran);
+  let guard = 0;
+  while (cur.getTime() < to.getTime() && guard++ < 1000) {
+    out.push({ start: cur, label: bucketLabel(cur, gran) });
+    const p = klParts(cur);
+    if (gran === 'hour') cur = klInstant(p.y, p.m, p.d, p.h + 1);
+    else if (gran === 'day') cur = klInstant(p.y, p.m, p.d + 1);
+    else if (gran === 'week')
+      cur = new Date(cur.getTime() + 7 * 24 * 60 * 60 * 1000);
+    else cur = klInstant(p.y, p.m + 1, 1);
+  }
+  return out;
+}
+/** Zero-fill a grouped query (day→value) onto the full bucket list. */
+function fillBuckets(
+  buckets: { start: Date; label: string }[],
+  rows: { day: string; value: number }[],
+): DailyPoint[] {
+  const map = new Map(rows.map((r) => [r.day, Number(r.value) || 0]));
+  return buckets.map((b) => ({ day: b.label, value: map.get(b.label) ?? 0 }));
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -274,6 +412,41 @@ export class AdminService {
       where: { cancelAtPeriodEnd: true },
     });
 
+    // Cancel timing — did they bail during the free trial, or churn after they
+    // started paying? A sub whose period ended at/before its trial end never
+    // converted (canceled in trial); ending after means they paid first.
+    const cancelTimingRow: {
+      during_trial: number;
+      after_trial: number;
+      pending_trial: number;
+      pending_active: number;
+    }[] = await this.subs.query(
+      `SELECT
+         COUNT(*) FILTER (
+           WHERE status IN ('canceled','expired')
+             AND trial_ends_at IS NOT NULL
+             AND (current_period_end IS NULL OR current_period_end <= trial_ends_at)
+         )::int AS during_trial,
+         COUNT(*) FILTER (
+           WHERE status IN ('canceled','expired')
+             AND (trial_ends_at IS NULL OR current_period_end > trial_ends_at)
+         )::int AS after_trial,
+         COUNT(*) FILTER (
+           WHERE cancel_at_period_end = true AND status = 'trialing'
+         )::int AS pending_trial,
+         COUNT(*) FILTER (
+           WHERE cancel_at_period_end = true AND status = 'active'
+         )::int AS pending_active
+       FROM subscriptions`,
+    );
+    const ct = cancelTimingRow?.[0];
+    const cancels = {
+      duringTrial: toInt(ct?.during_trial),
+      afterTrial: toInt(ct?.after_trial),
+      pendingDuringTrial: toInt(ct?.pending_trial),
+      pendingAfterTrial: toInt(ct?.pending_active),
+    };
+
     // Rough trial→paid conversion: active out of everyone who is or was past
     // the trial decision point (active + trialing).
     const conversionRate =
@@ -288,6 +461,7 @@ export class AdminService {
       trialing,
       pastDue,
       cancelPending,
+      cancels,
       conversionRate,
     };
   }
@@ -679,6 +853,117 @@ export class AdminService {
         deletedSubscriptions,
         clearedAiUsage,
       };
+    });
+  }
+
+  // ── Time-series (ranged, for the dashboard growth + MRR charts) ─────────────
+  /**
+   * User signups, new paying subscribers, and cumulative MRR over a selected
+   * range. Buckets are picked to keep the chart readable (hour → day → week →
+   * month) and aligned to Asia/Kuala_Lumpur. MRR is reconstructed from each
+   * subscription's paid window (trial end → cancel), since we don't snapshot it.
+   */
+  async timeseries(
+    rangeKey: string,
+    fromIso?: string,
+    toIso?: string,
+  ): Promise<{
+    range: string;
+    from: string;
+    to: string;
+    granularity: Granularity;
+    signups: DailyPoint[];
+    newPaying: DailyPoint[];
+    mrr: DailyPoint[];
+  }> {
+    const { from, to, gran } = resolveRange(rangeKey, fromIso, toIso);
+    const buckets = buildBuckets(from, to, gran);
+    const trunc = `date_trunc('${gran}', (created_at AT TIME ZONE '${KL_TZ}'))`;
+    const fmt = gran === 'hour' ? 'YYYY-MM-DD"T"HH24:00' : 'YYYY-MM-DD';
+
+    // Signups per bucket.
+    const signupRows: { day: string; value: number }[] = await this.users.query(
+      `SELECT to_char(${trunc}, '${fmt}') AS day, COUNT(*)::int AS value
+       FROM users WHERE created_at >= $1 AND created_at < $2
+       GROUP BY 1 ORDER BY 1`,
+      [from.toISOString(), to.toISOString()],
+    );
+
+    // New paying subscribers per bucket: a sub's "paid start" is when its trial
+    // ends (or its creation if it never trialed). Count those that started in
+    // the window and ever became a real paying sub.
+    const paidRows: { day: string; value: number }[] = await this.subs.query(
+      `SELECT to_char(
+                date_trunc('${gran}', (COALESCE(trial_ends_at, created_at) AT TIME ZONE '${KL_TZ}')),
+                '${fmt}') AS day,
+              COUNT(*)::int AS value
+       FROM subscriptions
+       WHERE status IN ('active','past_due','canceled','expired')
+         AND COALESCE(trial_ends_at, created_at) >= $1
+         AND COALESCE(trial_ends_at, created_at) < $2
+       GROUP BY 1 ORDER BY 1`,
+      [from.toISOString(), to.toISOString()],
+    );
+
+    const signups = fillBuckets(buckets, signupRows);
+    const newPaying = fillBuckets(buckets, paidRows);
+    const mrr = await this.reconstructMrr(buckets);
+
+    return {
+      range: rangeKey,
+      from: from.toISOString(),
+      to: to.toISOString(),
+      granularity: gran,
+      signups,
+      newPaying,
+      mrr,
+    };
+  }
+
+  /**
+   * Cumulative MRR at the end of each bucket. For every sub that ever paid we
+   * know its paid window [paidStart, paidEnd): paidStart = trial end (or
+   * creation), paidEnd = when it was canceled/expired (updated_at) or open.
+   * A sub contributes its monthly run-rate to every bucket its window covers.
+   */
+  private async reconstructMrr(
+    buckets: { start: Date; label: string }[],
+  ): Promise<DailyPoint[]> {
+    const subs: {
+      billing_interval: string | null;
+      status: string;
+      created_at: string;
+      trial_ends_at: string | null;
+      updated_at: string;
+      current_period_end: string | null;
+    }[] = await this.subs.query(
+      `SELECT billing_interval, status, created_at, trial_ends_at, updated_at,
+              current_period_end
+       FROM subscriptions
+       WHERE status IN ('active','past_due','canceled','expired')`,
+    );
+
+    const windows = subs.map((s) => {
+      const paidStart = new Date(s.trial_ends_at ?? s.created_at).getTime();
+      const ended = s.status === 'canceled' || s.status === 'expired';
+      const paidEnd = ended
+        ? new Date(s.current_period_end ?? s.updated_at).getTime()
+        : Number.POSITIVE_INFINITY;
+      const rate =
+        s.billing_interval === BillingInterval.ANNUAL
+          ? PRO_ANNUAL / 12
+          : PRO_MONTHLY;
+      return { paidStart, paidEnd, rate };
+    });
+
+    return buckets.map((b) => {
+      // MRR as of the end of this bucket (the next bucket's start, or now).
+      const at = b.start.getTime();
+      const mrr = windows.reduce(
+        (sum, w) => (w.paidStart <= at && at < w.paidEnd ? sum + w.rate : sum),
+        0,
+      );
+      return { day: b.label, value: Number(mrr.toFixed(2)) };
     });
   }
 
