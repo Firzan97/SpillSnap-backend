@@ -86,7 +86,7 @@ export class EntitlementService {
 
     let status: SubscriptionStatus;
     if (paidActive) {
-      // Report Stripe's real status. When a user subscribes during the 7-day app
+      // Report Stripe's real status. When a user subscribes during the 5-day app
       // trial, Stripe defers the first charge and marks the subscription
       // 'trialing' until trial_end, then flips to 'active'. We surface that as-is
       // so the account page reads "trialing" until the trial date passes, then

@@ -44,7 +44,7 @@ export interface AppLimits {
 
 export const DEFAULT_LIMITS: AppLimits = {
   freeMonthlyScans: 15,
-  trialDays: 7,
+  trialDays: 5,
 };
 
 /** @deprecated use AppLimits.freeMonthlyScans (kept for any static reference). */
