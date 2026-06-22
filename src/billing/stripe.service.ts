@@ -72,9 +72,11 @@ export class StripeService {
   }
 
   /**
-   * Create a hosted Checkout session for a Pro subscription. `trialEnd` (unix
-   * seconds) defers the first charge until the app trial ends, so the card is
-   * collected now but not billed during the 5-day trial.
+   * Create a hosted Checkout session for a Pro subscription. `trialDays` defers
+   * the first charge until the trial ends, so the card is collected now but not
+   * billed during the trial. Use Stripe's integer `trial_period_days` (not an
+   * absolute trial_end): Checkout floors an absolute end timestamp by elapsed
+   * render time, so "5 days" would show as "4 days free".
    */
   async createCheckoutSession(params: {
     customerId: string;
@@ -82,7 +84,7 @@ export class StripeService {
     userId: string;
     successUrl: string;
     cancelUrl: string;
-    trialEnd?: number;
+    trialDays?: number;
   }): Promise<string> {
     const session = await this.stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -93,7 +95,9 @@ export class StripeService {
       client_reference_id: params.userId,
       subscription_data: {
         metadata: { userId: params.userId },
-        ...(params.trialEnd ? { trial_end: params.trialEnd } : {}),
+        ...(params.trialDays && params.trialDays > 0
+          ? { trial_period_days: params.trialDays }
+          : {}),
       },
     });
     if (!session.url) {
