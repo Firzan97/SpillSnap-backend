@@ -23,6 +23,7 @@ import {
 } from './services/receipt-extraction.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CurrencyService } from '../currency/currency.service';
+import { EntitlementService } from '../billing/entitlement.service';
 
 const STREAK_MILESTONES = new Set([3, 7, 14, 30, 60, 100, 365]);
 
@@ -38,14 +39,30 @@ export class ReceiptsService {
     private readonly usersService: UsersService,
     private readonly notifications: NotificationsService,
     private readonly currency: CurrencyService,
+    private readonly entitlements: EntitlementService,
   ) {}
 
   /** Fill baseCurrency/baseAmount/fxRate on a receipt from the user's base currency. */
   private async applyConversion(receipt: Receipt, user: User): Promise<void> {
     const base = user.baseCurrency || 'MYR';
+    const currency = receipt.currency || base;
+
+    // Logging a receipt in a currency other than your base (foreign-currency
+    // capture + FX conversion) is a Pro feature. Setting the base currency
+    // itself stays free. Only resolve the entitlement when it actually differs,
+    // so normal same-currency saves skip the lookup.
+    if (currency !== base) {
+      const ent = await this.entitlements.resolve(user);
+      if (!ent.features.multiCurrency) {
+        throw new UnprocessableEntityException(
+          'Logging receipts in a currency other than your base currency is a Pro feature. Upgrade to Pro for multi-currency.',
+        );
+      }
+    }
+
     const { baseAmount, fxRate } = await this.currency.convert(
       Number(receipt.amount),
-      receipt.currency || base,
+      currency,
       base,
     );
     receipt.baseCurrency = base;
