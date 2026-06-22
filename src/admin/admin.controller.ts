@@ -84,6 +84,22 @@ export class AdminController {
     return this.adminService.reset();
   }
 
+  @Post('comp-pro')
+  @ApiOperation({
+    summary: 'Grant complimentary Pro to a user by email (store review / comps)',
+    description:
+      'Marks an existing user as an open-ended active Pro subscriber with no Stripe charge. The account must already exist — sign it up in the app first. Admin only. Body: { "email": "review@spillsnap.com" }.',
+  })
+  @ApiResponse({ status: 201, description: 'Pro granted' })
+  @ApiResponse({ status: 400, description: 'Missing email' })
+  @ApiResponse({ status: 404, description: 'No user with that email' })
+  compPro(@Body() body: { email?: string }) {
+    if (!body?.email) {
+      throw new BadRequestException('email is required');
+    }
+    return this.adminService.compPro(body.email);
+  }
+
   // ── Pricing (admin-editable) ────────────────────────────────────────────────
   @Get('pricing')
   @ApiOperation({ summary: 'Get effective pricing + default + override flag' })

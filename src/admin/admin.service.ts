@@ -2,7 +2,7 @@
 // Admin metrics use raw SQL via repo.query(), which TypeORM types as `any`. The
 // row shapes are asserted at the access site (toInt(...) / `as string`), so the
 // unsafe-any rules are disabled for this file rather than littered per-line.
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AiUsage } from '../billing/entities/ai-usage.entity';
@@ -224,6 +224,49 @@ export class AdminService {
     @InjectRepository(AiUsage) private readonly aiUsage: Repository<AiUsage>,
     private readonly appConfig: AppConfigService,
   ) {}
+
+  // ── Complimentary Pro ────────────────────────────────────────────────────────
+  /**
+   * Grant complimentary Pro to an existing user by email — for App Store /
+   * Play Store review accounts, influencers, or support comps. Marks their
+   * subscription as an open-ended active Pro plan with NO Stripe charge, and
+   * flips the role cache. A placeholder stripeSubscriptionId makes the
+   * entitlement read it as paid-active; stripeCustomerId stays null so a future
+   * real checkout still creates a proper Stripe customer.
+   */
+  async compPro(
+    email: string,
+  ): Promise<{ email: string; userId: string; status: string }> {
+    const normalized = email.trim().toLowerCase();
+    const user = await this.users
+      .createQueryBuilder('u')
+      .where('LOWER(u.email) = :email', { email: normalized })
+      .getOne();
+    if (!user) {
+      throw new NotFoundException(
+        `No user with email ${normalized}. Sign the account up in the app first, then comp it.`,
+      );
+    }
+
+    const existing = await this.subs.findOne({ where: { userId: user.id } });
+    const sub = this.subs.create({
+      ...(existing ?? {}),
+      userId: user.id,
+      plan: PlanId.PRO,
+      status: SubscriptionStatus.ACTIVE,
+      billingInterval: existing?.billingInterval ?? BillingInterval.ANNUAL,
+      // Non-null so entitlement.paidActive passes; clearly fake so it never
+      // collides with a real Stripe subscription id.
+      stripeSubscriptionId: existing?.stripeSubscriptionId ?? `comp_${user.id}`,
+      currentPeriodEnd: null, // open-ended → always active
+      trialEndsAt: null,
+      cancelAtPeriodEnd: false,
+    });
+    await this.subs.save(sub);
+    await this.users.update(user.id, { role: UserRole.PRO });
+
+    return { email: user.email, userId: user.id, status: 'pro_active' };
+  }
 
   // ── Pricing (admin-editable) ────────────────────────────────────────────────
   /** Effective pricing + the code default + whether an override is active. */
